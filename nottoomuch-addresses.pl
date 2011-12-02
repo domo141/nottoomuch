@@ -3,7 +3,7 @@
 # $ nottoomuch-addresses.pl $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Wed 30 Nov 2011 22:56:10 EET too
+# Last modified: Fri 02 Dec 2011 19:11:33 EET too
 
 # Add this to your notmuch elisp configuration file:
 #
@@ -11,7 +11,7 @@
 # (setq notmuch-address-command "/path/to/nottoomuch-addresses.pl")
 # (notmuch-address-message-insinuate)
 
-# Documentation at the end.
+# Documentation at the end. HISTORY after BEGIN block below. Encoding: utf-8.
 
 #BEGIN { system '/bin/sh', '-c', 'env > $HOME/na-ENV.$$'; }
 
@@ -22,7 +22,7 @@ BEGIN {
     $configdir = ($ENV{XDG_CONFIG_HOME}||$ENV{HOME}.'/.config').'/nottoomuch';
     $adbpath = $configdir . '/addresses';
 
-    if ($ENV{TERM} eq 'dumb' or @ARGV and $ARGV[0] !~ /^--/)
+    if (@ARGV and $ARGV[0] !~ /^--/)
     {
 	my $search_str = "@ARGV";
 	exit 0 unless length $search_str >= 3; # more than 2 chars required...
@@ -37,6 +37,17 @@ BEGIN {
 	exit 0;
     }
 }
+
+# HISTORY
+#
+# Version 1.1 2011-12-02 17:11:33 UTC
+#   * Removed Naïve assumption that on-one runs update on 'dumb' terminal.
+#   * Check address database file first line whether it is known to us.
+#
+#   Thanks to Bart Bunting for providing a good bug report.
+#
+# Version 1.0 2011-11-30 20:56:10 UTC
+#   * Initial release
 
 use 5.8.1;
 use strict;
@@ -66,7 +77,9 @@ if ($ARGV[0] eq '--help')
     require Pod::Perldoc;
     $SIG{__DIE__} = 'DEFAULT';
     # in case PAGER is not set, perldoc runs /usr/bin/perl -isr ...
-    $ENV{LESS} .= 'R' if $ENV{PAGER} eq 'less' and $ENV{LESS} !~ /[rR]/;
+    if ( ($ENV{PAGER} || '') eq 'less') {
+	$ENV{LESS} .= 'R' if ($ENV{LESS} || '') !~ /[rR]/;
+    }
     @ARGV = ( $0 );
     exit ( Pod::Perldoc->run() );
 }
@@ -88,13 +101,16 @@ if ($ARGV[0] eq '--update')
 
     mkdirs $configdir unless -d $configdir;
 
-    unlink $adbpath if defined $ARGV[1] and $ARGV[1] eq "--rebuild";
+    unlink $adbpath if defined $ARGV[1] and $ARGV[1] eq '--rebuild';
 
-    my ($sstr, $acount);
+    my ($sstr, $acount) = (0, 0);
     my $stime = time;
-    if (-f $adbpath) {
+    if (-s $adbpath) {
 	die "Cannot open '$adbpath': $!\n" unless open I, '<', $adbpath;
-	$sstr = <I>;
+	no warnings;
+	$sstr = int <I>;
+    }
+    if ($sstr > 1e8) { # arbitrary value: 86400 * 1157.4 (1973-03-03 09:46:40Z)
 	$sstr -= 86400 * 7; # one week extra to (re)look.
 	print "Updating '$adbpath', since $sstr.\n";
 	$sstr .= '..';
@@ -103,9 +119,9 @@ if ($ARGV[0] eq '--update')
 	$acount = scalar @list;
     }
     else {
+	die "'$adbpath' exists but contains unknown content!\n" if -s $adbpath;
 	print "Creating '$adbpath'. This may take some time...\n";
 	$sstr = '*';
-	$acount = 0;
     }
     my %hash = map { $_ => 1 } @list;
     if (-f $ignpath) {
@@ -281,7 +297,7 @@ if ($ARGV[0] eq '--update')
     undef %hash;
     undef %seen;
     my $etime = time;
-    open O, '>', $adbpath or die;
+    open O, '>', $adbpath or die "Cannot write to '$adbpath': $!\n";
     print O $etime, "\n";
     print O join("\n", sort @list), "\n";
     close O;
