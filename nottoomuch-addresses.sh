@@ -1,53 +1,46 @@
-#!/usr/bin/perl
+#!/bin/sh
 # -*- cperl -*-
-# $ nottoomuch-addresses.pl $
+
+case $* in ''|--*) exec perl -x "$0" "$@" ;;
+ ???*)
+  exec grep -aiF "$*" "${XDG_CONFIG_HOME:-$HOME/.config}/nottoomuch/addresses"
+esac
+exit 0
+
+# $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Fri 02 Dec 2011 19:11:33 EET too
+# Last modified: Mon 12 Dec 2011 17:41:05 EET too
 
 # Add this to your notmuch elisp configuration file:
 #
 # (require 'notmuch-address)
-# (setq notmuch-address-command "/path/to/nottoomuch-addresses.pl")
+# (setq notmuch-address-command "/path/to/nottoomuch-addresses.sh")
 # (notmuch-address-message-insinuate)
 
-# Documentation at the end. HISTORY after BEGIN block below. Encoding: utf-8.
-
-#BEGIN { system '/bin/sh', '-c', 'env > $HOME/na-ENV.$$'; }
-
-my ($configdir, $adbpath);
-
-# optimize search case -- no need to compile further in this case.
-BEGIN {
-    $configdir = ($ENV{XDG_CONFIG_HOME}||$ENV{HOME}.'/.config').'/nottoomuch';
-    $adbpath = $configdir . '/addresses';
-
-    if (@ARGV and $ARGV[0] !~ /^--/)
-    {
-	my $search_str = "@ARGV";
-	exit 0 unless length $search_str >= 3; # more than 2 chars required...
-
-	unless (open I, '<', $adbpath) {
-	    print "Cannot open database, maybe not created yet.\n";
-	    print "run $0 --update from command line first.\n";
-	    exit 0;
-	}
-	print grep { index($_, $search_str) >= 0 } <I>;
-	close I;
-	exit 0;
-    }
-}
+# Documentation at the end. Encoding: utf-8.
 
 # HISTORY
 #
-# Version 1.1 2011-12-02 17:11:33 UTC
-#   * Removed Naïve assumption that on-one runs update on 'dumb' terminal.
+# Version 1.3  2011-12-12 15:41:05 UTC
+#   * Changed to store/show addresses in 'newest first' order
+#   * Changed addresses file header to force address file rebuild.
+#
+# Version 1.2  2011-12-06 18:00:00 UTC
+#   * Changed search work case-insensitively -- grep(1) does it locale-aware.
+#   * Changed this program execute from /bin/sh (wrapper).
+#
+# Version 1.1  2011-12-02 17:11:33 UTC
+#   * Removed Naïve assumption that no-one runs update on 'dumb' terminal.
 #   * Check address database file first line whether it is known to us.
 #
 #   Thanks to Bart Bunting for providing a good bug report.
 #
-# Version 1.0 2011-11-30 20:56:10 UTC
+# Version 1.0  2011-11-30 20:56:10 UTC
 #   * Initial release
+
+#!perl
+# line 44
 
 use 5.8.1;
 use strict;
@@ -58,6 +51,10 @@ use MIME::Base64 'decode_base64';
 use MIME::QuotedPrint 'decode_qp';
 
 no encoding;
+
+my $configdir = ($ENV{XDG_CONFIG_HOME}||$ENV{HOME}.'/.config').'/nottoomuch';
+my $adbpath = $configdir . '/addresses';
+my $ignpath = $configdir . '/addresses.ignore';
 
 unless (@ARGV)
 {
@@ -84,8 +81,6 @@ if ($ARGV[0] eq '--help')
     exit ( Pod::Perldoc->run() );
 }
 
-my $ignpath = $configdir . '/addresses.ignore';
-
 my @list;
 
 if ($ARGV[0] eq '--update')
@@ -104,34 +99,38 @@ if ($ARGV[0] eq '--update')
     unlink $adbpath if defined $ARGV[1] and $ARGV[1] eq '--rebuild';
 
     my ($sstr, $acount) = (0, 0);
-    my $stime = time;
     if (-s $adbpath) {
 	die "Cannot open '$adbpath': $!\n" unless open I, '<', $adbpath;
-	no warnings;
-	$sstr = int <I>;
+	sysread I, $_, 18;
+	# new header: "v2/dd/dd/dd/dd/dd/" where / == '\n'
+	if (/^v2\n(\d\d)\n(\d\d)\n(\d\d)\n(\d\d)\n(\d\d)\n$/) {
+	    $sstr = "$1$2$3$4$5" - 86400 * 7; # one week extra to (re)look.
+	    $sstr = 0 if $sstr < 0;
+	}
+	close I if $sstr == 0;
     }
-    if ($sstr > 1e8) { # arbitrary value: 86400 * 1157.4 (1973-03-03 09:46:40Z)
-	$sstr -= 86400 * 7; # one week extra to (re)look.
+    if ($sstr > 0) {
 	print "Updating '$adbpath', since $sstr.\n";
 	$sstr .= '..';
-	@list = grep { chomp; length; } <I>;
-	close I;
-	$acount = scalar @list;
     }
     else {
-	die "'$adbpath' exists but contains unknown content!\n" if -s $adbpath;
 	print "Creating '$adbpath'. This may take some time...\n";
 	$sstr = '*';
     }
-    my %hash = map { $_ => 1 } @list;
+    my %hash;
     if (-f $ignpath) {
-	die "Cannot open '$ignpath': $!\n" unless open I, '<', $ignpath;
-	while (<I>) {
+	die "Cannot open '$ignpath': $!\n" unless open J, '<', $ignpath;
+	while (<J>) {
 	    chomp;
 	    $hash{$_} = 1;
 	}
-	close I;
+	close J;
     }
+
+    my $sometime = time;
+    die "Cannot open '$adbpath.new': $!\n" unless open O, '>', $adbpath.'.new';
+    $_ = $sometime; s/(..)/$1\n/g;
+    print O "v2\n$_";
 
     # The following code block is from Email::Address, almost verbatim.
     # The reasons to snip code I instead of just 'use Email::Address' are:
@@ -206,17 +205,18 @@ if ($ARGV[0] eq '--update')
     # In this particular purpose the cache code used in...
     my %seen; # ...Email::Address is "replaced" by %seen & %hash.
 
-    my $ptime = $stime + 5;
+    my $ptime = $sometime + 5;
+    my $new = 0;
     $| = 1;
-    open I, '-|', qw/notmuch show/, $sstr;
-    while (<I>) {
+    open P, '-|', qw/notmuch show/, $sstr;
+    while (<P>) {
 	next unless /^From:\s/i or /^To:\s/i or /^Cc:\s/i;
 	s/\s+$//;
 	s/^.*?:\s+//;
 
 	if (time > $ptime) {
 	    my $c = qw(/ - \ |)[int ($ptime / 5) % 4];
-	    print "$c new addresses gathered: ", scalar @list - $acount, "\r";
+	    print "$c addresses gathered: ", $new, "\r";
 	    $ptime += 5;
 	}
 
@@ -287,25 +287,35 @@ if ($ARGV[0] eq '--update')
 			       tr/_/ / unless /@/; 1; } @comments;
 	    #@comments = grep {	defined } @comments;
 
-	    $_ = join ' ', @phrase, $userhost, @comments;
+	    $_ = join(' ', @phrase, $userhost, @comments) . "\n";
 	    next if defined $hash{$_};
-	    push @list, $_;
+	    print O $_;
 	    $hash{$_} = 1;
+	    $new++;
 	}
 	# --8<----8<----8<----8<----8<----8<----8<----8<----8<----8<----8<--
     }
-    undef %hash;
     undef %seen;
-    my $etime = time;
-    open O, '>', $adbpath or die "Cannot write to '$adbpath': $!\n";
-    print O $etime, "\n";
-    print O join("\n", sort @list), "\n";
+    close P;
+    my $all = $new;
+    if ($sstr ne '*') {
+	my $dropped = 0;
+	while (<I>) {
+	    $dropped++, next unless /@/ and ! defined $hash{$_};
+	    $all++;
+	    print O $_;
+	}
+	close I;
+	$new -= $dropped;
+    }
     close O;
-    my $ecount = scalar @list;
-    my $count =  $ecount - $acount;
-    $etime -= $stime;
-    print "Added $count addresses in $etime seconds. ";
-    print "Total number of addresses: $ecount.\n";
+    undef %hash;
+    #link $adbpath, $adbpath . '.' . $sometime;
+    rename $adbpath . '.new', $adbpath or
+      die "Cannot rename '$adbpath.new' to '$adbpath': $!\n";
+    $sometime = time - $sometime;
+    print "Added $new addresses in $sometime seconds. ";
+    print "Total number of addresses: $all.\n";
     exit 0;
 }
 
@@ -317,17 +327,17 @@ __END__
 
 =head1 NAME
 
-nottoomuch-addresses.pl -- address completion/matching (for notmuch)
+nottoomuch-addresses.sh -- address completion/matching (for notmuch)
 
 =head1 SYNOPSIS
 
-nottoomuch-addresses.pl ( --update [--rebuild] | <search string> )
+nottoomuch-addresses.sh ( --update [--rebuild] | <search string> )
 
-B<nottoomuch-addresses.pl --help>  for more help
+B<nottoomuch-addresses.sh --help>  for more help
 
 =head1 VERSION
 
-1.0 (2011-11-30)
+1.3 (2011-12-12)
 
 =head1 OPTIONS
 
