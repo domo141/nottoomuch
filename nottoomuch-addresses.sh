@@ -10,7 +10,7 @@ exit 0
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Mon 12 Dec 2011 17:41:05 EET too
+# Last modified: Wed 14 Dec 2011 21:24:28 EET too
 
 # Add this to your notmuch elisp configuration file:
 #
@@ -20,10 +20,18 @@ exit 0
 
 # Documentation at the end. Encoding: utf-8.
 
+#!perl
+# line 25
+
 # HISTORY
 #
+# Version 1.4  2011-12-14 19:24:28 UTC
+#   * Changed to run notmuch search --sort=newest-first --output=files ...
+#     (instead of notmuch show ...) and read headers from files internally.
+#   * Fixed away joining uninitialized $phrase value to address line.
+#
 # Version 1.3  2011-12-12 15:41:05 UTC
-#   * Changed to store/show addresses in 'newest first' order
+#   * Changed to store/show addresses in 'newest first' order.
 #   * Changed addresses file header to force address file rebuild.
 #
 # Version 1.2  2011-12-06 18:00:00 UTC
@@ -37,10 +45,7 @@ exit 0
 #   Thanks to Bart Bunting for providing a good bug report.
 #
 # Version 1.0  2011-11-30 20:56:10 UTC
-#   * Initial release
-
-#!perl
-# line 44
+#   * Initial release.
 
 use 5.8.1;
 use strict;
@@ -208,11 +213,27 @@ if ($ARGV[0] eq '--update')
     my $ptime = $sometime + 5;
     my $new = 0;
     $| = 1;
-    open P, '-|', qw/notmuch show/, $sstr;
+    open P, '-|', qw/notmuch search --sort=newest-first --output=files/, $sstr;
     while (<P>) {
-	next unless /^From:\s/i or /^To:\s/i or /^Cc:\s/i;
+      chomp;
+      open M, '<', $_ or next;
+
+      while (<M>) {
+	last if /^\s*$/;
+	next unless s/^(From|To|Cc|Bcc):\s+//i;
 	s/\s+$//;
-	s/^.*?:\s+//;
+	my @a = ( $_ );
+	while (<M>) {
+	    # XXX leaks to body in case empty line is found in this loop...
+	    # XXX Note that older code leaked to mail body always...
+	    if (s/^\s+// or s/^(From|To|Cc|Bcc):\s+/,/i) {
+		s/\s+$//;
+		push @a, $_;
+		next;
+	    }
+	    last;
+	}
+	$_ = join ' ', @a;
 
 	if (time > $ptime) {
 	    my $c = qw(/ - \ |)[int ($ptime / 5) % 4];
@@ -287,6 +308,7 @@ if ($ARGV[0] eq '--update')
 			       tr/_/ / unless /@/; 1; } @comments;
 	    #@comments = grep {	defined } @comments;
 
+	    @phrase = () unless defined $phrase[0];
 	    $_ = join(' ', @phrase, $userhost, @comments) . "\n";
 	    next if defined $hash{$_};
 	    print O $_;
@@ -294,6 +316,8 @@ if ($ARGV[0] eq '--update')
 	    $new++;
 	}
 	# --8<----8<----8<----8<----8<----8<----8<----8<----8<----8<----8<--
+      }
+      close M;
     }
     undef %seen;
     close P;
@@ -337,7 +361,7 @@ B<nottoomuch-addresses.sh --help>  for more help
 
 =head1 VERSION
 
-1.3 (2011-12-12)
+1.4 (2011-12-14)
 
 =head1 OPTIONS
 
