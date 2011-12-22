@@ -3,14 +3,15 @@
 
 case $* in ''|--*) exec perl -x "$0" "$@" ;;
  ???*)
-  exec grep -aiF "$*" "${XDG_CONFIG_HOME:-$HOME/.config}/nottoomuch/addresses"
+	grep -aiF "$*" "${XDG_CONFIG_HOME:-$HOME/.config}/nottoomuch/addresses"
 esac
-exit 0
+case $? in 0|1) exit 0; esac
+exit $?
 
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Wed 14 Dec 2011 21:24:28 EET too
+# Last modified: Thu 22 Dec 2011 22:20:32 EET too
 
 # Add this to your notmuch elisp configuration file:
 #
@@ -21,9 +22,14 @@ exit 0
 # Documentation at the end. Encoding: utf-8.
 
 #!perl
-# line 25
+# line 26
 
 # HISTORY
+#
+# Version 1.5  2011-12-22 20:20:32 UTC
+#   * Changed search to exit with zero value (also) if no match found.
+#   * Changed addresses file header (v3) to use \t as separator. Addresses
+#     file containing previous version header (v2) can also be read.
 #
 # Version 1.4  2011-12-14 19:24:28 UTC
 #   * Changed to run notmuch search --sort=newest-first --output=files ...
@@ -107,8 +113,8 @@ if ($ARGV[0] eq '--update')
     if (-s $adbpath) {
 	die "Cannot open '$adbpath': $!\n" unless open I, '<', $adbpath;
 	sysread I, $_, 18;
-	# new header: "v2/dd/dd/dd/dd/dd/" where / == '\n'
-	if (/^v2\n(\d\d)\n(\d\d)\n(\d\d)\n(\d\d)\n(\d\d)\n$/) {
+	# new header: "v3/dd/dd/dd/dd/dd\n" where / == '\t' (but match also v2)
+	if (/^v[23]\s(\d\d)\s(\d\d)\s(\d\d)\s(\d\d)\s(\d\d)\n$/) {
 	    $sstr = "$1$2$3$4$5" - 86400 * 7; # one week extra to (re)look.
 	    $sstr = 0 if $sstr < 0;
 	}
@@ -134,8 +140,8 @@ if ($ARGV[0] eq '--update')
 
     my $sometime = time;
     die "Cannot open '$adbpath.new': $!\n" unless open O, '>', $adbpath.'.new';
-    $_ = $sometime; s/(..)/$1\n/g;
-    print O "v2\n$_";
+    $_ = $sometime; s/(..)\B/$1\t/g;
+    print O "v3\t$_\n";
 
     # The following code block is from Email::Address, almost verbatim.
     # The reasons to snip code I instead of just 'use Email::Address' are:
@@ -361,7 +367,7 @@ B<nottoomuch-addresses.sh --help>  for more help
 
 =head1 VERSION
 
-1.4 (2011-12-14)
+1.5 (2011-12-22)
 
 =head1 OPTIONS
 
@@ -386,8 +392,7 @@ In case no option argument is given on command line, the command line
 arguments are used as fixed search string. Search goes through all
 email addresses in database and outputs every address (separated by
 newline) where a substring match with the given search string is
-found. No wildcard of regular expression matching is used. Output is
-sorted in ASCII order.
+found. No wildcard of regular expression matching is used.
 
 Search is not done unless there is at least 3 octets in search string.
 
