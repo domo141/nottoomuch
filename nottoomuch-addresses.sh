@@ -11,7 +11,7 @@ exit $?
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Thu 22 Dec 2011 22:20:32 EET too
+# Last modified: Thu 29 Dec 2011 08:42:42 EET too
 
 # Add this to your notmuch elisp configuration file:
 #
@@ -26,10 +26,15 @@ exit $?
 
 # HISTORY
 #
+# Version 1.6  2011-12-29 06:42:42 UTC
+#   * Fixed 'encoded-text' regognization and concatenations, and underscore
+#     to space replacements. Now quite RFC 2047 "compliant".
+#
 # Version 1.5  2011-12-22 20:20:32 UTC
 #   * Changed search to exit with zero value (also) if no match found.
 #   * Changed addresses file header (v3) to use \t as separator. Addresses
 #     file containing previous version header (v2) can also be read.
+#   * Removed outdated information about sorting in ASCII order.
 #
 # Version 1.4  2011-12-14 19:24:28 UTC
 #   * Changed to run notmuch search --sort=newest-first --output=files ...
@@ -252,6 +257,7 @@ if ($ARGV[0] eq '--update')
 	# --8<----8<----8<----8<----8<----8<----8<----8<----8<----8<----8<--
 
 	s/[ \t]+/ /g;
+	s/\?= =\?/\?==\?/g;
 	my (@mailboxes) = (/$mailbox/go);
 	foreach (@mailboxes) {
 	    next if $seen{$_};
@@ -268,24 +274,24 @@ if ($ARGV[0] eq '--update')
 	    }
 
 	    sub decode_data () {
-		local $_ = $1;
-		if (s/^utf-8\?(q|b)\?//i) {
-		    return (lc $1 eq 'q')? decode_qp($_): decode_base64($_);
+		my $t = lc $2;
+		my $s;
+		if ($t eq 'b') { $s = decode_base64($3); }
+		elsif ($t eq 'q') { $s = decode_qp($3);	}
+		else {
+		    return "=?$1?$2?$3?=";
 		}
-		if (s/^([\w-]+)\?(q|b)\?//i) {
-		    my $t = lc $2;
-		    my $o = find_encoding($1);
-		    if (ref $o) {
-			my $s = ($t eq 'q')? decode_qp($_): decode_base64($_);
-			# Encode(3p) is fuzzy whether encode_utf8 is needed...
-			return encode_utf8($o->decode($s));
-		    }
-		}
-		return "=?$_?=";
+		$s =~ tr/_/ /;
+
+		return $s if lc $1 eq 'utf-8';
+
+		my $o = find_encoding($1);
+		return "=?$1?$2?$3?=" unless ref $o;
+		return encode_utf8($o->decode($s));
 	    }
 
 	    my @phrase       = /($display_name)/o;
-	    $phrase[0] =~ s/=\?(.+?)\?=/decode_data/ge if @phrase;
+	    $phrase[0]=~ s/=\?([^?]+)\?(\w)\?(.*?)\?=/decode_data/ge if @phrase;
 
 	    for ( @phrase, $host, $user, @comments ) {
 		next unless defined $_;
@@ -298,20 +304,16 @@ if ($ARGV[0] eq '--update')
 
 	    for (@phrase) { # to get the only one aliased to $_
 		next unless defined $_; # previous loop may undefine this.
-		# if it's encoded -- rjbs, 2007-02-28
-		unless (/\A=\?.+\?=\z/) {
-		    #s/\A"(.+)"\z/$1/;
-		    tr/\\//d; ## 20111124 too
-		    tr/_/ / unless /@/;  ## 20111130 too
-		    s/\"/\\"/g;
-		    $_ = '"'.$_.'"';
-		}
+		#s/\A"(.+)"\z/$1/;
+		tr/\\//d; ## 20111124 too
+		s/\"/\\"/g;
+		$_ = '"'.$_.'"';
 	    }
 	    my $userhost = lc "<$user\@$host>";
 	    #my $userhost = "<$user\@$host>";
 	    @comments = grep { defined or return 0;
-			       s/=\?(.+?)\?=/decode_data/ge;
-			       tr/_/ / unless /@/; 1; } @comments;
+			       s/=\?([^?]+)\?(\w)\?(.*?)\?=/decode_data/ge; 1;
+			   } @comments;
 	    #@comments = grep {	defined } @comments;
 
 	    @phrase = () unless defined $phrase[0];
@@ -367,7 +369,7 @@ B<nottoomuch-addresses.sh --help>  for more help
 
 =head1 VERSION
 
-1.5 (2011-12-22)
+1.6 (2011-12-29)
 
 =head1 OPTIONS
 
