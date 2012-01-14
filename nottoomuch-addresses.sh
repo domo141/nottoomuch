@@ -1,17 +1,15 @@
 #!/bin/sh
 # -*- cperl -*-
 
-case $* in ''|--*) exec perl -x "$0" "$@" ;;
- ???*)
-	grep -aiF "$*" "${XDG_CONFIG_HOME:-$HOME/.config}/nottoomuch/addresses"
-esac
+case $* in (''|--*) exec perl -x "$0" "$@" ;; (???*) ;; (*) exit 0 ;; esac
+grep -aiF "$*" "${XDG_CONFIG_HOME:-$HOME/.config}/nottoomuch/addresses.active"
 case $? in 0|1) exit 0; esac
 exit $?
 
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Thu 29 Dec 2011 08:42:42 EET too
+# Last modified: Sat 14 Jan 2012 05:45:00 EET too
 
 # Add this to your notmuch elisp configuration file:
 #
@@ -22,9 +20,18 @@ exit $?
 # Documentation at the end. Encoding: utf-8.
 
 #!perl
-# line 26
+# line 24
 
 # HISTORY
+#
+# Version 2.0  2012-01-14 03:45:00 UTC
+#   * Added regexp-based igrores using /regexp/[i] syntax in ignore file.
+#   * Changed addresses file header to v4; 'addresses' file now contains all
+#     found addresses plus some metainformation added at the end of the file.
+#     Filtered (by ignores) address list is now in new 'addresses.active'
+#     file and the fgrep code at the beginning now uses this "active" file.
+#     Addresses file with header v2 and v3 are supported for reading.
+#   * Encoded address content is now recursively decoded.
 #
 # Version 1.6  2011-12-29 06:42:42 UTC
 #   * Fixed 'encoded-text' regognization and concatenations, and underscore
@@ -71,6 +78,7 @@ no encoding;
 my $configdir = ($ENV{XDG_CONFIG_HOME}||$ENV{HOME}.'/.config').'/nottoomuch';
 my $adbpath = $configdir . '/addresses';
 my $ignpath = $configdir . '/addresses.ignore';
+my $actpath = $configdir . '/addresses.active';
 
 unless (@ARGV)
 {
@@ -118,8 +126,8 @@ if ($ARGV[0] eq '--update')
     if (-s $adbpath) {
 	die "Cannot open '$adbpath': $!\n" unless open I, '<', $adbpath;
 	sysread I, $_, 18;
-	# new header: "v3/dd/dd/dd/dd/dd\n" where / == '\t' (but match also v2)
-	if (/^v[23]\s(\d\d)\s(\d\d)\s(\d\d)\s(\d\d)\s(\d\d)\n$/) {
+	# new header: "v4/dd/dd/dd/dd/dd\n" where / == '\t' (but match also v2)
+	if (/^v[234]\s(\d\d)\s(\d\d)\s(\d\d)\s(\d\d)\s(\d\d)\n$/) {
 	    $sstr = "$1$2$3$4$5" - 86400 * 7; # one week extra to (re)look.
 	    $sstr = 0 if $sstr < 0;
 	}
@@ -133,20 +141,32 @@ if ($ARGV[0] eq '--update')
 	print "Creating '$adbpath'. This may take some time...\n";
 	$sstr = '*';
     }
-    my %hash;
+    my (%ign_hash, @ign_relist);
     if (-f $ignpath) {
 	die "Cannot open '$ignpath': $!\n" unless open J, '<', $ignpath;
 	while (<J>) {
-	    chomp;
-	    $hash{$_} = 1;
+	    next if /^\s*#/;
+	    if (m|^/(.*)/(\w*)\s*$|) {
+		if ($2 eq 'i') {
+		    push @ign_relist, qr/$1/i;
+		}
+		else {
+		    push @ign_relist, qr/$1/;
+		}
+	    }
+	    else {
+		s/\s+$/\n/;
+		$ign_hash{$_} = 1;
+	    }
 	}
 	close J;
     }
 
     my $sometime = time;
     die "Cannot open '$adbpath.new': $!\n" unless open O, '>', $adbpath.'.new';
+    die "Cannot open '$actpath.new': $!\n" unless open A, '>', $actpath.'.new';
     $_ = $sometime; s/(..)\B/$1\t/g;
-    print O "v3\t$_\n";
+    print O "v4\t$_\n";
 
     # The following code block is from Email::Address, almost verbatim.
     # The reasons to snip code I instead of just 'use Email::Address' are:
@@ -220,9 +240,10 @@ if ($ARGV[0] eq '--update')
 
     # In this particular purpose the cache code used in...
     my %seen; # ...Email::Address is "replaced" by %seen & %hash.
+    my %hash;
 
     my $ptime = $sometime + 5;
-    my $new = 0;
+    my $addrcount = 0;
     $| = 1;
     open P, '-|', qw/notmuch search --sort=newest-first --output=files/, $sstr;
     while (<P>) {
@@ -248,7 +269,7 @@ if ($ARGV[0] eq '--update')
 
 	if (time > $ptime) {
 	    my $c = qw(/ - \ |)[int ($ptime / 5) % 4];
-	    print "$c addresses gathered: ", $new, "\r";
+	    print $c, ' active addresses gathered: ', $addrcount, "\r";
 	    $ptime += 5;
 	}
 
@@ -259,7 +280,7 @@ if ($ARGV[0] eq '--update')
 	s/[ \t]+/ /g;
 	s/\?= =\?/\?==\?/g;
 	my (@mailboxes) = (/$mailbox/go);
-	foreach (@mailboxes) {
+	L: foreach (@mailboxes) {
 	    next if $seen{$_};
 	    $seen{$_} = 1;
 
@@ -291,7 +312,9 @@ if ($ARGV[0] eq '--update')
 	    }
 
 	    my @phrase       = /($display_name)/o;
-	    $phrase[0]=~ s/=\?([^?]+)\?(\w)\?(.*?)\?=/decode_data/ge if @phrase;
+	    foreach (@phrase) {
+		while ( s/=\?([^?]+)\?(\w)\?(.*?)\?=/decode_data/ge ) {};
+	    }
 
 	    for ( @phrase, $host, $user, @comments ) {
 		next unless defined $_;
@@ -321,7 +344,12 @@ if ($ARGV[0] eq '--update')
 	    next if defined $hash{$_};
 	    print O $_;
 	    $hash{$_} = 1;
-	    $new++;
+	    next if defined $ign_hash{$_};
+	    foreach my $re (@ign_relist) {
+		next L if $_ =~ $re;
+	    }
+	    print A $_;
+	    $addrcount++;
 	}
 	# --8<----8<----8<----8<----8<----8<----8<----8<----8<----8<----8<--
       }
@@ -329,25 +357,40 @@ if ($ARGV[0] eq '--update')
     }
     undef %seen;
     close P;
-    my $all = $new;
+    my $oldaddrcount = 0;
     if ($sstr ne '*') {
-	my $dropped = 0;
-	while (<I>) {
-	    $dropped++, next unless /@/ and ! defined $hash{$_};
-	    $all++;
+	L: while (<I>) {
+	    last if /^---/;
+	    next if defined $hash{$_};
 	    print O $_;
+	    next if defined $ign_hash{$_};
+	    foreach my $re (@ign_relist) {
+		next L if $_ =~ $re;
+	    }
+	    print A $_;
+	    $addrcount++;
+	}
+	while (<I>) {
+	    $oldaddrcount = ($1 + 0), next if /^active:\s+(\d+)\s*$/;
 	}
 	close I;
-	$new -= $dropped;
     }
+    print O "---\n";
+    print O "active: ", $addrcount, "\n";
     close O;
+    close A;
     undef %hash;
     #link $adbpath, $adbpath . '.' . $sometime;
     rename $adbpath . '.new', $adbpath or
       die "Cannot rename '$adbpath.new' to '$adbpath': $!\n";
-    $sometime = time - $sometime;
-    print "Added $new addresses in $sometime seconds. ";
-    print "Total number of addresses: $all.\n";
+    rename $actpath . '.new', $actpath or
+      die "Cannot rename '$actpath.new' to '$actpath': $!\n";
+    if ($oldaddrcount or $sstr eq '*') {
+	$sometime = time - $sometime;
+	my $new = $addrcount - $oldaddrcount;
+	print "Added $new active addresses in $sometime seconds.\n";
+    }
+    print "Total number of active addresses: $addrcount.\n";
     exit 0;
 }
 
@@ -369,7 +412,7 @@ B<nottoomuch-addresses.sh --help>  for more help
 
 =head1 VERSION
 
-1.6 (2011-12-29)
+2.0 (2011-01-14)
 
 =head1 OPTIONS
 
@@ -414,6 +457,13 @@ Use your text editor to open both of these files. Then move address
 lines to be ignored from B<addresses> to B<addresses.ignore>. After
 saving these 2 files the moved addresses will not reappear in
 B<addresses> file again.
+
+Version 2.0 of nottoomuch-addresses.sh supports regular expressions in
+ignore file. Lines in format I</regexp/> or I</regexp/i> defines (perl)
+I<regexp>s which are used to match email addresses for ignoring. The
+I</i> format makes regular expression case-insensitive -- although this
+is only applied to characters in ranges I<A-Z> and I<a-z>. Remember that
+I</^.*regexp.*$/> and I</regexp/> provides same set of matching lines.
 
 =head1 LICENSE
 
