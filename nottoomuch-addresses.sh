@@ -9,7 +9,7 @@ exit $?
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Sat 14 Jan 2012 05:45:00 EET too
+# Last modified: Wed 22 Feb 2012 16:58:58 EET too
 
 # Add this to your notmuch elisp configuration file:
 #
@@ -24,8 +24,12 @@ exit $?
 
 # HISTORY
 #
+# Version 2.1  2012-02-22 14:58:58 UTC
+#   * Fixed a bug where decoding matching but unknown or malformed =?...?=-
+#     encoded parts in email addresses lead to infinite loop.
+#
 # Version 2.0  2012-01-14 03:45:00 UTC
-#   * Added regexp-based igrores using /regexp/[i] syntax in ignore file.
+#   * Added regexp-based ignores using /regexp/[i] syntax in ignore file.
 #   * Changed addresses file header to v4; 'addresses' file now contains all
 #     found addresses plus some metainformation added at the end of the file.
 #     Filtered (by ignores) address list is now in new 'addresses.active'
@@ -34,7 +38,7 @@ exit $?
 #   * Encoded address content is now recursively decoded.
 #
 # Version 1.6  2011-12-29 06:42:42 UTC
-#   * Fixed 'encoded-text' regognization and concatenations, and underscore
+#   * Fixed 'encoded-text' recognition and concatenations, and underscore
 #     to space replacements. Now quite RFC 2047 "compliant".
 #
 # Version 1.5  2011-12-22 20:20:32 UTC
@@ -165,7 +169,7 @@ if ($ARGV[0] eq '--update')
     my $sometime = time;
     die "Cannot open '$adbpath.new': $!\n" unless open O, '>', $adbpath.'.new';
     die "Cannot open '$actpath.new': $!\n" unless open A, '>', $actpath.'.new';
-    $_ = $sometime; s/(..)\B/$1\t/g;
+    $_ = $sometime; s/(..)\B/$1\t/g; # FYI: s/..\B\K/\t/g requires perl 5.10.
     print O "v4\t$_\n";
 
     # The following code block is from Email::Address, almost verbatim.
@@ -294,12 +298,13 @@ if ($ARGV[0] eq '--update')
 		($user, $host) = ($1, $2);
 	    }
 
-	    sub decode_data () {
+	    sub decode_substring ($) {
 		my $t = lc $2;
 		my $s;
 		if ($t eq 'b') { $s = decode_base64($3); }
 		elsif ($t eq 'q') { $s = decode_qp($3);	}
 		else {
+		    $_[0] = 0;
 		    return "=?$1?$2?$3?=";
 		}
 		$s =~ tr/_/ /;
@@ -307,14 +312,19 @@ if ($ARGV[0] eq '--update')
 		return $s if lc $1 eq 'utf-8';
 
 		my $o = find_encoding($1);
-		return "=?$1?$2?$3?=" unless ref $o;
+		$_[0] = 0, return "=?$1?$2?$3?=" unless ref $o;
 		return encode_utf8($o->decode($s));
+	    }
+	    sub decode_data () {
+		my $loopmax = 5;
+		while ( s{ =\?([^?]+)\?(\w)\?(.*?)\?= }
+			 { decode_substring($loopmax) }gex ) {
+		    last if --$loopmax <= 0;
+		};
 	    }
 
 	    my @phrase       = /($display_name)/o;
-	    foreach (@phrase) {
-		while ( s/=\?([^?]+)\?(\w)\?(.*?)\?=/decode_data/ge ) {};
-	    }
+	    decode_data foreach (@phrase);
 
 	    for ( @phrase, $host, $user, @comments ) {
 		next unless defined $_;
@@ -334,10 +344,8 @@ if ($ARGV[0] eq '--update')
 	    }
 	    my $userhost = lc "<$user\@$host>";
 	    #my $userhost = "<$user\@$host>";
-	    @comments = grep { defined or return 0;
-			       s/=\?([^?]+)\?(\w)\?(.*?)\?=/decode_data/ge; 1;
-			   } @comments;
-	    #@comments = grep {	defined } @comments;
+
+	    @comments = grep { defined or return 0; decode_data; 1; } @comments;
 
 	    @phrase = () unless defined $phrase[0];
 	    $_ = join(' ', @phrase, $userhost, @comments) . "\n";
@@ -412,7 +420,7 @@ B<nottoomuch-addresses.sh --help>  for more help
 
 =head1 VERSION
 
-2.0 (2011-01-14)
+2.1 (2011-02-22)
 
 =head1 OPTIONS
 
@@ -486,7 +494,7 @@ L<notmuch>, L<Email::Address>
 
 Tomi Ollila -- too ät iki piste fi
 
-=head1 ACKNOWLEDGEMENTS
+=head1 ACKNOWLEDGMENTS
 
 This program uses code from Email::Address, Copyright (c) by Casey West
 and maintained by Ricardo Signes. Thank you. All new bugs are mine,
