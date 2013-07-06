@@ -11,7 +11,7 @@ my personal “extensions” around notmuch mail indexer that are too specific
 to be added to http://notmuchmail.org/ wiki, with additional scripts
 that aren't feasible to be stored to the wiki.
 
-`nottooomuch-addresses <nottoomuch-addresses.txt>`_
+`nottooomuch-addresses <nottoomuch-addresses.rst>`_
 
 branches in this git repo
 -------------------------
