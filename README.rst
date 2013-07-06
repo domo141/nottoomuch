@@ -16,17 +16,32 @@ that aren't feasible to be stored to the wiki.
 branches in this git repo
 -------------------------
 
-the **master** branch contains “production quality” files
+master
+  “release quality” material
 
-the **dogfoog** branch is used by me. that has latest “experimental” stuff.
-that branch i rebase at will. it can be used by anyone who doesn't get
-scared by forced updates. also rebasing work on that may be somewhat more
-complicated than with branches whose remote-tracking branch keeps its history.
+dogfood
+  bleeding edge / undocument hacks -- branch i use to run my stuff.
+  this branch will get **forced updates** often, either when this branch
+  is rebased on top of current master or when i amend this to look how
+  the outcome looks from a web browser.
 
-the **df-yymm-1234567** branches contains dogfood stuff branched from
-master, first non-master commit being **1234567**. these will not be
-rebased but i remove these branches from time to time (presumably seldom).
-these are more rebase-safe than **dogfood**.
+df-yymm-1234567
+  the **tree** of these branches are kept in sync with **dogfood** branch
+  but the history is not altered. the **1234567** is the commit id of
+  first commit in these branches after branching from master; i.e. this
+  commit should always be available in the git repository. these branches
+  are treated like (long lived) topic-branches -- eventually these will
+  go away and replaced with newer ones (less non-master commits).
+
+contributing
+------------
+
+if anyone ever desires to contribute to this repo, it is easier to deal
+with **master** and **df-yymm-1234567** branches than **dogfood**.
+i accept patches in links to commit id, as pull requests and as in
+patch emails provided by git-format-patch (and git-send-email).
+
+*too ät iki dot fi*
 
 ----
 
