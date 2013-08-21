@@ -12,15 +12,22 @@ to be added to http://notmuchmail.org/ wiki, with additional scripts
 that aren't feasible to be stored to the wiki.
 
 nottoomuch-addresses_
+selection-menu_
 
 software
 --------
 
 nottoomuch-addresses_
+  the address completion provider i use to get list of email addresses
+  from where email addresses is selected when sending emails.
+
+.. _nottoomuch-addresses: nottoomuch-addresses.rst
+
+selection-menu_
   the address completion tool i use to complete email addresses
   when sending emails.
 
-.. _nottoomuch-addresses: nottoomuch-addresses.rst
+.. _selection-menu: selection-menu.rst
 
 branches
 --------
