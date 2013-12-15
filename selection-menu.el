@@ -14,6 +14,32 @@
 ;; key reading (and get mouse events into picture, too)
 ;; (or maybe mouse events could already be read but how to handle...)
 
+(defun selection-menu-current-option ()
+  (get-text-property (point) 'selection-menu-option))
+
+(defun selection-menu-current-start ()
+  (get-text-property (point) 'selection-menu-option-start))
+
+(defun selection-menu-current-end ()
+  (get-text-property (point) 'selection-menu-option-end))
+
+(defun selection-menu-adjust ()
+  (let ((start (selection-menu-current-start)))
+    (when start
+      (goto-char start))))
+
+(defun selection-menu-up ()
+  (goto-char (selection-menu-current-start))
+  (unless (bobp)
+    (forward-line -1)
+    (selection-menu-adjust)))
+
+(defun selection-menu-down ()
+  (let ((current-point (point)))
+    (goto-char (selection-menu-current-end))
+    (unless (selection-menu-adjust)
+      (goto-char current-point))))
+
 (defun selection-menu--select (ident &optional unread)
   (let ((helpmsg "Type ESC to abort, Space or Enter to select.")
 	(buffer-read-only t)
@@ -21,29 +47,26 @@
     (forward-line -1)
     (setq last (point))
     (goto-char (point-min))
-    (setq first (1+ (point)))
+    (setq first (point))
     (save-window-excursion
       (pop-to-buffer (current-buffer))
       (setq mode-name "Selection Menu"
 	    mode-line-buffer-identification (concat "*" ident "*"))
-      (setq overlay (make-overlay (point) (line-end-position)))
+      (setq overlay (make-overlay (selection-menu-current-start) (selection-menu-current-end)))
       (overlay-put overlay 'face 'highlight)
       (while
 	  (let ((event (selection-menu--read-key helpmsg)))
 	    (cond ((or (eq event 'up) (eq event 16))
-		   (when (> (point) first)
-		     (forward-line -1)
-		     (move-overlay overlay (point) (line-end-position)))
+		     (selection-menu-up)
+		     (move-overlay overlay (selection-menu-current-start) (selection-menu-current-end))
 		   t)
 		  ((or (eq event 'down) (eq event 14))
-		   (when (< (point) last)
-		     (forward-line)
-		     (move-overlay overlay (point) (line-end-position)))
+		     (selection-menu-down)
+		     (move-overlay overlay (selection-menu-current-start) (selection-menu-current-end))
 		   t)
 		  ((or (eq event 32) (eq event 13) (eq event 'return))
 		   (setq select
-			 (buffer-substring (1+ (point))
-					   (line-end-position)))
+			 (selection-menu-current-option))
 		   nil)
 		  ((eq event 'escape)
 		   nil)
@@ -64,8 +87,15 @@ read key back to input queue for parent to consume."
   (if (eq (length items) 0) nil
     (save-excursion
       (with-temp-buffer
-	(dolist (item items) (insert " " item "\n"))
-	(selection-menu--select ident unread)))))
+	(dolist (item items)
+	  (let ((start (point-marker))
+		  end)
+	      (insert item "\n")
+	      (setq end (point-marker))
+	      (put-text-property start end 'selection-menu-option item)
+	      (put-text-property start end 'selection-menu-option-start start)
+	      (put-text-property start end 'selection-menu-option-end end)))
+	  (selection-menu--select ident unread)))))
 
 ;;(selection-menu "foo" (list))
 ;;(selection-menu "foo" (list "a"))
