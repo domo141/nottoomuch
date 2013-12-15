@@ -40,7 +40,7 @@
     (unless (selection-menu-adjust)
       (goto-char current-point))))
 
-(defun selection-menu--select (ident &optional unread)
+(defun selection-menu--select (ident &optional unread key-short-cut-list)
   (let ((helpmsg "Type ESC to abort, Space or Enter to select.")
 	(buffer-read-only t)
 	first last overlay pevent select)
@@ -68,6 +68,8 @@
 		   (setq select
 			 (selection-menu-current-option))
 		   nil)
+		  ((setq select (plist-get key-short-cut-list event))
+		   nil)
 		  ((eq event 'escape)
 		   nil)
 		  (t (setq pevent event)
@@ -87,17 +89,21 @@ read key back to input queue for parent to consume."
   (if (eq (length items) 0) nil
     (save-excursion
       (with-temp-buffer
+	(let (key-short-cut-list)
 	  (dolist (item items)
 	    (let ((option (if (listp item) (nth 0 item) item))
 		  (description (if (listp item) (nth 1 item) (concat " " item)))
+		  (key-short-cuts (if (listp item) (nth 2 item)))
 		  (start (point-marker))
 		  end)
 	      (insert description "\n")
 	      (setq end (point-marker))
+	      (dolist (key key-short-cuts)
+		(setq key-short-cut-list (plist-put key-short-cut-list key option)))
 	      (put-text-property start end 'selection-menu-option option)
 	      (put-text-property start end 'selection-menu-option-start start)
 	      (put-text-property start end 'selection-menu-option-end end)))
-	  (selection-menu--select ident unread)))))
+	  (selection-menu--select ident unread key-short-cut-list))))))
 
 ;;(selection-menu "foo" (list))
 ;;(selection-menu "foo" (list "a"))
