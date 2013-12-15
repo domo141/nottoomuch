@@ -108,6 +108,8 @@ read key back to input queue for parent to consume."
 ;;(selection-menu "foo" (list))
 ;;(selection-menu "foo" (list "a"))
 ;;(selection-menu "Send mail to:" (list "a" "b" "c" "d" "faaarao") t)
+;;(selection-menu "Send mail to:" (list '("a" "alpha") '("b" "beta") '("c" "gamma") '("d" "delta")) t)
+;;(selection-menu "Send mail to:" (list (list "alpha" "alpha" '(?a ?A)) (list "bravo" "beta" '(?b ?B)) (list "cat" "gamma" '(?c ?C))) t)
 ;; test by entering c-x c-e at the end of previous lines
 
 (provide 'selection-menu)
