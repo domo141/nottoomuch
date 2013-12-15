@@ -87,12 +87,14 @@ read key back to input queue for parent to consume."
   (if (eq (length items) 0) nil
     (save-excursion
       (with-temp-buffer
-	(dolist (item items)
-	  (let ((start (point-marker))
+	  (dolist (item items)
+	    (let ((option (if (listp item) (nth 0 item) item))
+		  (description (if (listp item) (nth 1 item) (concat " " item)))
+		  (start (point-marker))
 		  end)
-	      (insert item "\n")
+	      (insert description "\n")
 	      (setq end (point-marker))
-	      (put-text-property start end 'selection-menu-option item)
+	      (put-text-property start end 'selection-menu-option option)
 	      (put-text-property start end 'selection-menu-option-start start)
 	      (put-text-property start end 'selection-menu-option-end end)))
 	  (selection-menu--select ident unread)))))
