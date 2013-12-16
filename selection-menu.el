@@ -1,7 +1,13 @@
 ;;; selection-menu.el --- "generic" menu to choose one string.
 ;;;
 ;;; Author: Tomi Ollila -- too ät iki piste fi
-
+;;;
+;;; Contributions (see git log for details):
+;;;
+;;;   Mark Walters:
+;;;     2013-12-15:  list-based interface with possibility to have multiline
+;;;                  menu entries and keybindings for those.
+;;;
 ;;; License: GPLv2+
 
 ;; read-key is available in emacs 23.2 & newer...
