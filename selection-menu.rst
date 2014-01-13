@@ -25,6 +25,11 @@ feature use selection menu:
         (lambda (prompt collection initial-input)
           (selection-menu "Send To:" (cons initial-input collection) t)))
 
+See also
+--------
+
+`nottoomuch-addresses <nottoomuch-addresses.rst>`_
+
 
 Example picture
 ---------------
