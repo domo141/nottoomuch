@@ -9,7 +9,7 @@ exit $?
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Wed 22 Feb 2012 16:58:58 EET too
+# Last modified: Mon 05 Mar 2012 11:47:28 EET too
 
 # Add this to your notmuch elisp configuration file:
 #
@@ -21,8 +21,20 @@ exit $?
 
 #!perl
 # line 24
+# - 24 -^
 
 # HISTORY
+#
+# Version wip  2012-xx-xx xx:xx:xx UTC (polish!)
+#   * In case there is both {phrase} and (comment) in an email address,
+#     append comment to the phrase. This will make more duplicates to be
+#     removed. Now there can be:
+#	<user@host>
+#	"phrase" <user@host>
+#	"phrase (comment)" <user@host>
+#	<user@host> (comment)
+#   * In case email address is in form "someuser@somehost" <someuser@somehost>
+#     i.e. the phrase is exactly the same as <address>, phrase is dropped.
 #
 # Version 2.1  2012-02-22 14:58:58 UTC
 #   * Fixed a bug where decoding matching but unknown or malformed =?...?=-
@@ -335,19 +347,33 @@ if ($ARGV[0] eq '--update')
 	    # here we want to have email address always // 20111123 too
 	    next unless defined $user and defined $host;
 
-	    for (@phrase) { # to get the only one aliased to $_
-		next unless defined $_; # previous loop may undefine this.
-		#s/\A"(.+)"\z/$1/;
-		tr/\\//d; ## 20111124 too
-		s/\"/\\"/g;
-		$_ = '"'.$_.'"';
-	    }
 	    my $userhost = lc "<$user\@$host>";
 	    #my $userhost = "<$user\@$host>";
 
 	    @comments = grep { defined or return 0; decode_data; 1; } @comments;
 
-	    @phrase = () unless defined $phrase[0];
+	    # "trim" phrase, if equals to user@host after trimming, drop it.
+	    if (defined $phrase[0]) {
+		#$phrase[0] =~s/\A"(.+)"\z/$1/;
+		$phrase[0] =~ tr/\\//d; ## 20111124 too
+		$phrase[0] =~ s/\"/\\"/g;
+		@phrase = () if lc "<$phrase[0]>" eq $userhost;
+	    }
+
+	    # In case we would have {phrase} <user@host> (comment),
+	    # make that "{phrase} (comment)" <user@host> ...
+	    if (defined $phrase[0]) {
+		if (@comments) {
+		    $phrase[0] = qq/"$phrase[0] / . join(' ', @comments) . '"';
+		    @comments = ();
+		}
+		else {
+		    $phrase[0] = qq/"$phrase[0]"/;
+		}
+	    }
+	    else {
+		@phrase = ();
+	    }
 	    $_ = join(' ', @phrase, $userhost, @comments) . "\n";
 	    next if defined $hash{$_};
 	    print O $_;
@@ -420,7 +446,7 @@ B<nottoomuch-addresses.sh --help>  for more help
 
 =head1 VERSION
 
-2.1 (2011-02-22)
+wip (2012-xx-xx)
 
 =head1 OPTIONS
 
