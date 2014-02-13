@@ -33,3 +33,6 @@ ps: guess how many
 
 lines i've executed in ‛dogfood’ branch so far (HEAD commit contained
 changes to `README.rst` only).
+
+pps: actually the above works also when checking ‛master’ content; the
+command line just needs to end with ``git push --force origin HEAD:test``.
