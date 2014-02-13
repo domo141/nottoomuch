@@ -13,13 +13,17 @@ that aren't feasible to be stored to the wiki.
 
 address completion:
 
-nottoomuch-addresses_
+nottoomuch-addresses_ |
 selection-menu_
 
 mail delivery:
 
-startfetchmail_
-md5mda_
+`startfetchmail <#mail-delivery>`__ |
+`md5mda <#mail-delivery>`__
+
+building:
+
+`make-one-notmuch-el <#building>`__
 
 
 address completion
@@ -56,6 +60,22 @@ md5mda_
   startfetchmail_ provides an example how md5mda_ is used.
 
 .. _md5mda: md5mda.sh
+
+
+building
+--------
+
+make-one-notmuch-el_
+  i like to have the notmuch emacs byte-compiled file available as a one
+  file which is easy to carry along. this script combines all notmuch .el
+  files together (with minor adjustments) in suitable order for
+  byte-compilation as one file to succeed. the final ``one-notmuch.elc``
+  is somewhat smaller than all notmuch ``.elc`` files separately and
+  may even load a bit faster. i've been using this for quite a long time
+  and have not had problems -- but ymmv with your different setup in case
+  trying this option.
+
+.. _make-one-notmuch-el: make-one-notmuch-el.pl
 
 
 repository branches
