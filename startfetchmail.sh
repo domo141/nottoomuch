@@ -3,7 +3,7 @@
 # $ startfetchmail.sh $
 #
 # Created: Wed 06 Mar 2013 17:17:58 EET too
-# Last modified: Wed 12 Feb 2014 21:37:01 +0200 too
+# Last modified: Sun 16 Feb 2014 22:35:31 +0200 too
 
 # Fetchmail does not offer an option to daemonize it after first authentication
 # is successful (and report if it failed). After 2 fragile attempts to capture
@@ -42,7 +42,7 @@ case $# in 5) ;; *) exec >&2
 	echo '    Mails are not removed from imap server.'
 	echo
 	echo ' ' $0 143 nokeep $USER mailhost.example.org \\
-        echo "          ~'/nottoomuch/md5mda.sh -d --cd mail received wip log'"
+        echo "          ~'/nottoomuch/md5mda.sh --cd mail received wip log'"
 	echo
 	echo '    Deliver mail from imap server (STARTTLS required) to'
 	echo '    separate mails in ~/mail/received/??/ directories.'
