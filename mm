@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Wed 19 Feb 2014 23:24:37 +0200 too
+# Last Modified: Thu 20 Feb 2014 00:42:07 +0200 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -17,6 +17,7 @@ case ~ in '~') exec >&2; echo
 	exit 1
 esac
 
+warn () { echo "$@"; } >&2
 
 cmd_source () # Display source of given $0 command (or function).
 {
@@ -60,27 +61,34 @@ cmd_mua () # Launch emacs as mail user agent.
 mbox2md5mda ()
 {
 	set_d0
-	tmpfile=`LC_ALL=C exec perl -e 'mkdir q"wip" unless -d q"wip";
-                system q"mktemp", (sprintf q"wip/mbox-%x,XXXX", time)'`
-	set -x
-	$d0/mbox-to-mda.sh --movemail $tmpfile $MAIL \
-		$d0/md5mda.sh received wip log ||
+	tmpfile=`cd $HOME/mail; LC_ALL=C exec perl -e '
+		mkdir q"wip" unless -d q"wip";
+		system q"mktemp", (sprintf q"wip/mbox-%x,XXXX", time)'`
+	( cd $HOME/mail; set -x; exec \
+	  $d0/mbox-to-mda.sh --movemail $tmpfile $MAIL \
+		$d0/md5mda.sh received wip log ) ||
 		: ::: mbox-to-mda.sh exited nonzero ::: :
 	test -s $tmpfile || rm $tmpfile
 }
 
 cmd_new () # Import new mail.
 {
-	# XXX fix cd location to avoid the path problem...
-	cd $HOME/mail # note: $0 needs to have absolute path for mbox2md5mda...
 	TIMEFORMAT='%Us user %Ss system %P%% cpu %Rs total'
 	ymdhms=`exec date +%Y%m%d-%H%M%S`
-	case ${MAIL-} in '') set -x # nothing else to do
-	;;	*"[$IFS]"*) warn "'$MAIL' contains whitespace. Ignored.";set -x
-	;;	/var/*mail/*) test -s $MAIL && mbox2md5mda || set -x
-	;;	*) warn "Suspicious '$MAIL' path. Ignored."; set -x
+	case ${MAIL-} in '') # nothing to do when ''
+	;;	*"[$IFS]"*) warn "'$MAIL' contains whitespace. Ignored."
+	;;	/var/*mail/*) test ! -s $MAIL || mbox2md5mda
+	;;	*) warn "Suspicious '$MAIL' path. Ignored."
 	esac
+	cd $HOME/mail
+	set -x
 	time notmuch new --verbose | cat # tee -a log/new-$ymdhms.log
+}
+
+cmd_frm () # Run frm-md5mdalog.pl.
+{
+	set_d0
+	exec $d0/frm-md5mdalog.pl "$@"
 }
 
 # --
