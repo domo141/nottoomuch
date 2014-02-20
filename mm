@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Thu 20 Feb 2014 18:49:02 +0200 too
+# Last Modified: Thu 20 Feb 2014 19:14:04 +0200 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -64,11 +64,10 @@ mbox2md5mda ()
 	tmpfile=`cd $HOME/mail; LC_ALL=C exec perl -e '
 		mkdir q"wip" unless -d q"wip";
 		system q"mktemp", (sprintf q"wip/mbox-%x,XXXX", time)'`
-	( cd $HOME/mail; set -x; exec \
-	  $d0/mbox-to-mda.sh --movemail $tmpfile $MAIL \
-		$d0/md5mda.sh received wip log ) ||
+	$d0/mbox-to-mda.sh --movemail $HOME/mail/$tmpfile $MAIL \
+		$d0/md5mda.sh --cd $HOME/mail received wip log ||
 		: ::: mbox-to-mda.sh exited nonzero ::: :
-	test -s $tmpfile || rm $tmpfile
+	test -s $HOME/mail/$tmpfile || rm $HOME/mail/$tmpfile || :
 }
 
 cmd_new () # Import new mail.
@@ -80,9 +79,8 @@ cmd_new () # Import new mail.
 	;;	/var/*mail/*) test ! -s $MAIL || mbox2md5mda
 	;;	*) warn "Suspicious '$MAIL' path. Ignored."
 	esac
-	cd $HOME/mail
 	set -x
-	time notmuch new --verbose | cat # tee -a log/new-$ymdhms.log
+	time notmuch new --verbose | cat #tee -a $HOME/mail/log/new-$ymdhms.log
 }
 
 cmd_frm () # Run frm-md5mdalog.pl.
