@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Thu 20 Feb 2014 00:42:07 +0200 too
+# Last Modified: Thu 20 Feb 2014 18:49:02 +0200 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -43,7 +43,7 @@ set_d0 ()
 	then	# symlink. we can tolerate one level, as readlink(1)
 		set_ln_of_file "$0"	#  may not be always available.
 		dln=${ln%/*}; case $dln in $ln) dln=.; esac
-		d0=$d0/$dln
+		case $dln in /*) d0=$dln ;; *) d0=$d0/$dln; esac
 	fi
 	case $d0 in /*) ;; *) d0=`cd "$dn0"; pwd` ;; esac
 }
