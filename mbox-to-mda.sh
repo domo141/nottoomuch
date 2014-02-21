@@ -5,7 +5,7 @@
 #	    All rights reserved
 #
 # Created: Tue Jul 26 11:45:58 2011 (+0300) too
-# Last modified: Wed 19 Feb 2014 23:14:03 +0200 too
+# Last modified: Sat 22 Feb 2014 01:33:55 +0200 too
 
 set -eu
 
@@ -30,7 +30,7 @@ mmmboxf=
 verbose_echo () { echo "$@"; }
 while case ${1-} in
 	-q) verbose_echo () { :; } ;;
-	-h|-?|--help) usage; exec sed -n '/^Options:/,$ p' "$0" ;;
+	-h|-?|--help) usage; exec sed -n '/^This program /,$ p' "$0" ;;
 	--movemail=*) IFS==; set_argval $1; IFS=$saved_IFS; mmmboxf=$argval ;;
 	--movemail) mmmboxf=$2; shift ;;
 	--) shift; false ;;
@@ -112,7 +112,7 @@ exit
 # (supposedly atomically) and 'formail' to split these mails to
 # separate streams each given to mda-cmd provided in command line...
 
-This program delivers all mail from mbox file to a MDA program given
+This program delivers all mail from mbox file to an MDA program given
 on command line.
 
 Options:
