@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Created: Fri Aug 19 16:53:45 2011 +0300 too
-# Last Modified: Mon 17 Feb 2014 09:35:37 +0200 too
+# Last Modified: Fri 21 Feb 2014 21:44:37 +0200 too
 
 # This program examines the log files md5mda.sh has written to
 # $HOME/mail/log directory (XXX hardcoded internally to this script)
@@ -55,7 +55,7 @@ my @logfiles;
 
 if (defined $mio) {
     $mdlf = 'log/' . $mdlf;
-    my @alf = <log/*.log>;
+    my @alf = <log/md5mda-[0-9]*.log>;
     my $last;
     while (@alf) {
 	$last = shift @alf;
@@ -70,7 +70,7 @@ if (defined $mio) {
 }
 else {
     # last file, 0 loc.
-    $mdlf = $_ foreach (<log/*.log>);
+    $mdlf = $_ foreach (<log/md5mda-[0-9]*.log>);
     $mio = '0';
     @logfiles = ( $mdlf ) if defined $mdlf;
 }
