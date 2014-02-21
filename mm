@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Thu 20 Feb 2014 19:14:04 +0200 too
+# Last Modified: Fri 21 Feb 2014 18:19:54 +0200 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -50,10 +50,21 @@ set_d0 ()
 
 cmd_mua () # Launch emacs as mail user agent.
 {
+	case ${1-} in -y) ;; *)
+		if ps x | grep 'emacs[ ].*[ ]notmuch'
+		then    echo
+			echo '^^^ notmuch emacs mua already running ? ^^^'
+			echo
+			echo "to run another, add '-y' to the command line"
+			echo
+			exit 0
+		fi
+	esac
 	case ${DISPLAY-} in '')
 		printf '\033[8;38;108t'
 		exec emacs -f notmuch
 	esac
+	set -x
 	exec nohup setsid emacs -g 108x38 -f notmuch >/dev/null
 	# the command above works best on linux interactive terminal
 }
