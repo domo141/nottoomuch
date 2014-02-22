@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Fri 21 Feb 2014 18:25:43 +0200 too
+# Last Modified: Sat 22 Feb 2014 19:02:23 +0200 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -63,11 +63,12 @@ cmd_mua () # Launch emacs as mail user agent.
 		fi
 	esac
 	case ${DISPLAY-} in '')
-		printf '\033[8;38;108t'
+		#printf '\033[8;38;108t'
 		exec emacs -f notmuch
 	esac
 	set -x
-	exec nohup setsid emacs -g 108x38 -f notmuch >/dev/null
+	#exec nohup setsid emacs -g 108x38 -f notmuch >/dev/null
+	exec nohup setsid emacs -f notmuch >/dev/null
 	# the command above works best on linux interactive terminal
 }
 
