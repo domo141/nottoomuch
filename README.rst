@@ -21,6 +21,10 @@ mail delivery:
 `startfetchmail <#mail-delivery>`__ |
 `md5mda <#mail-delivery>`__
 
+remote access:
+
+nottoomuch-remote_
+
 building:
 
 `make-one-notmuch-el <#building>`__
@@ -61,6 +65,15 @@ md5mda_
 
 .. _md5mda: md5mda.sh
 
+
+remote access
+-------------
+
+nottoomuch-remote_
+  access notmuch on remote machine using ssh without passwordless login
+  requirement.
+
+.. _nottoomuch-remote: nottoomuch-remote.rst
 
 building
 --------
