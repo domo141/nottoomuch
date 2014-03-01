@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Sat 22 Feb 2014 19:02:23 +0200 too
+# Last Modified: Sat 01 Mar 2014 13:41:15 +0200 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -94,7 +94,11 @@ cmd_new () # Import new mail.
 	;;	*) warn "Suspicious '$MAIL' path. Ignored."
 	esac
 	set -x
-	time notmuch new --verbose | tee -a $HOME/mail/log/new-$ymdhms.log
+	time notmuch new --verbose | tee -a $HOME/mail/wip/new-$ymdhms.log
+	read line < $HOME/mail/wip/new-$ymdhms.log
+	case $line in 'No new mail.'*) rm $HOME/mail/wip/new-$ymdhms.log
+	;; *) mv $HOME/mail/wip/new-$ymdhms.log $HOME/mail/log/new-$ymdhms.log
+	esac
 }
 
 cmd_frm () # Run frm-md5mdalog.pl.
