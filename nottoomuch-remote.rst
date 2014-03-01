@@ -25,7 +25,7 @@ Test
 Easiest way to test this script is to run the pre-made ssh connection using
 the following command line:
 ::
-    $ ssh -M -S '~'/.ssh/master-user@host:22 [user@]remotehost sleep 600
+    $ ssh -M -S '~'/.ssh/master-notmuch@remote:22 [user@]remotehost sleep 600
 
 (replace ``[user@]remotehost`` above with your login info). Doing this the
 above wrapper script can be run unmodified. After the above command has
@@ -42,9 +42,9 @@ reading $HOME but checking the real user home directory from
 Tune
 ----
 
-The path ``'~'/.ssh/master-user@host:22`` might look too generic to be used
-as is as the control socket after initial testing (but it can be used). It
-is presented as a template for what could be configured to
+The path ``'~'/.ssh/master-notmuch@remote:22`` might look too generic to be
+used as is as the control socket after initial testing (but it can be used).
+It is presented as a template for what could be configured to
 ``$HOME/.ssh/config``. For example:
 ::
     Host *
@@ -53,58 +53,86 @@ is presented as a template for what could be configured to
 is a good entry to have been written in ``$HOME/.ssh/config``.
 Now, let's say you'd make your pre-made ssh connection with command
 ::
-    $ ssh -M alice@example.org
+    $ ssh -M robin@example.org
 
-After configuring
-``readonly SSH_CONTROL_SOCK='~'/.ssh/master-alice@example.org:22`` to the
-``./nottoomuch-remote.bash`` wrapper script testing with
-``./nottoomuch-remote.bash help`` should work fine.
+There is 3 options how to handle this with ``./nottoomuch-remote.bash``:
 
-**Hey:** alternative strategy is to symlink the configured socket to
-the one in ``./nottoomuch-remote.bash`` like:
-::
-    $ ln -sfT master-alice@example.org:22 ~/.ssh/master-notmuch@remote:22
+1) Edit ``./nottoomuch-remote.bash`` and change ``REMOTE_NOTMUCH_SSHCTRL_SOCK``
+   to contain the new value (being *master-robin@example.org:22* in this
+   case)
 
-That's what I am currently using -- it also provides easy way to switch
-to another master connection!
+2) Make symlink:
+   ``$ ln -sfT master-robin@example.org:22 ~/.ssh/master-notmuch@remote:22``
+
+3) ``REMOTE_NOTMUCH_SSHCTRL_SOCK`` can be used via environment; like:
+   ::
+       $ REMOTE_NOTMUCH_SSHCTRL_SOCK=master-robin@example.org:22 ./nottoomuch-remote.bash help
+
+Alternative 3 provides way to use remote notmuch without editing
+nottoomuch-remote.bash -- also the same script can be used with multiple
+clients to separate (local +) remotes simultaneously!
 
 Configure Emacs on the client computer
 --------------------------------------
 
-Add the following line to your Emacs (general(*) or notmuch specific)
-configuration file to tell the Emacs client to use the wrapper script:
+Add something like the following functions to your Emacs (general(*) or
+notmuch specific) configuration files:
 ::
+  ;; this should work as backend function when copied verbatim
+  (defun user/notmuch-remote-setup (sockname)
     (setq notmuch-command "/path/to/nottoomuch-remote.bash")
-
-If you use Fcc, you may want to do something like this on the client, to
-Bcc mails to yourself:
-::
+    (setenv "REMOTE_NOTMUCH_SSHCTRL_SOCK" sockname)
+    ;; If you use Fcc, you may want to do something like this on the client,
+    ;; to Bcc mails to yourself (if not, remove in your implementation):
     (setq notmuch-fcc-dirs nil)
     (add-hook 'message-header-setup-hook
-        (lambda () (insert (format "Bcc: %s <%s>\n"
-                    (notmuch-user-name)
-                    (notmuch-user-primary-email))))))
+              (lambda () (insert (format "Bcc: %s <%s>\n"
+                                         (notmuch-user-name)
+                                         (notmuch-user-primary-email))))))
+
+   ;; this is just an example to configure using "default" master socket
+   (defun user/notmuch-remote-default ()
+     (interactive)
+     (user/notmuch-remote-setup "master-notmuch@remote:22")
+
+   ;; usage example2: set USER & HOST1 according to your remote...
+   (defun user/notmuch-remote-at-HOST1 ()
+     (interactive)
+     (user/notmuch-remote-setup "master-USER@HOST1:22")
+
+   ;; ... you probably got the point now -- add relevant funcs to your config
+   (defun user/notmuch-remote-at-HOST2 ()
+     (interactive)
+     (user/notmuch-remote-setup "master-USER@HOST2:22")
+
+... and if you want to activate your remote by default just call
+``(user/notmuch-remote-setup "master-USER@HOST:22")`` without function call
+wrapper.
 
 (*) general most likely being ~/.emacs
 
 Creating master connection
 --------------------------
 
+**(Note: all the examples below use the default master socket written in**
+``./nottoomuch-remote.bash`` **for initial test easiness; remove/change the**
+``-S '~'/.ssh/master-notmuch@remote:22`` **in case you don't need it.)**
+
 As mentioned so many times, using this solution requires one pre-made ssh
 connection in *master* mode. The simplest way is to dedicate one terminal
 for the connection with shell access to the remote machine:
 ::
-    $ ssh -M -S '~'/.ssh/master-user@host:22 [user@]remotehost
+    $ ssh -M -S '~'/.ssh/master-notmuch@remote:22 [user@]remotehost
 
 One possibility is to have this dedicated terminal in a way that the
 connection has (for example 1 hour) timeout:
 ::
-    $ ssh -M -S '~'/.ssh/master-user@host:22 [user@]remotehost sleep 3600
+    $ ssh -M -S '~'/.ssh/master-notmuch@remote:22 [user@]remotehost sleep 3600
 
 The above holds the terminal. The next alternative puts the command in
 background:
 ::
-    $ ssh -f -M -S '~'/.ssh/master-user@host:22 [user@]remotehost sleep 3600
+    $ ssh -f -M -S '~'/.ssh/master-notmuch@remote:22 [user@]remotehost sleep 3600
 
 If you don't want this to timeout so soon, use a longer sleep, like
 99999999 (8 9:s, 1157 days, a bit more than 3 years).

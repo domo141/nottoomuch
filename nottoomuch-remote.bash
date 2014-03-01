@@ -1,8 +1,8 @@
 #!/bin/bash
-# -*- mode: shell-script; sh-basic-offset: 8; tab-width: 8 -*-
+# -*- shell-script -*-
 #
 # Created: Tue 29 May 2012 21:30:17 EEST too
-# Last modified: Fri 28 Feb 2014 22:15:26 +0200 too
+# Last modified: Sat 01 Mar 2014 19:11:43 +0200 too
 
 # See first ./nottoomuch-remote.rst and then maybe:
 # http://notmuchmail.org/remoteusage/
@@ -12,16 +12,18 @@ set -eu
 # To trace execution, uncomment next line.
 #BASH_XTRACEFD=6; exec 6>>remote-errors; echo -- >&6; set -x
 
-readonly SSH_CONTROL_SOCK='~'/.ssh/master-notmuch@remote:22
-#readonly SSH_CONTROL_SOCK='~'/.ssh/symlink-to-notmuch-remote-ctrl-sock
+: ${REMOTE_NOTMUCH_SSHCTRL_SOCK:=master-notmuch@remote:22}
+: ${REMOTE_NOTMUCH_COMMAND:=notmuch}
 
-readonly notmuch=notmuch
+readonly REMOTE_NOTMUCH_SSHCTRL_SOCK REMOTE_NOTMUCH_COMMAND
+
+SSH_CONTROL_ARGS='-oControlMaster=no -S ~'/.ssh/$REMOTE_NOTMUCH_SSHCTRL_SOCK
+readonly SSH_CONTROL_ARGS
 
 printf -v ARGS '%q ' "$@" # bash feature
+readonly ARGS
 
-readonly SSH_CONTROL_ARGS='-oControlMaster=no -S '$SSH_CONTROL_SOCK
-
-if ssh -q $SSH_CONTROL_ARGS 0.1 $notmuch $ARGS
+if ssh -q $SSH_CONTROL_ARGS 0.1 "$REMOTE_NOTMUCH_COMMAND" $ARGS
 then exit 0
 else ev=$?
 fi
@@ -42,10 +44,11 @@ exec >&2
 
 if ssh $SSH_CONTROL_ARGS -O check 0.1
 then
- echo ' Control socket is alive but something failed during data transmission'
+ echo " Control socket is alive but something exited with status $ev"
  exit $ev
 fi
 
 case $0 in */*) dn0=${0%/*} ;; *) dn0=. ;; esac
 echo "See  $dn0/nottoomuch-remote.rst  for more information"
-#EOF
+
+exit $ev
