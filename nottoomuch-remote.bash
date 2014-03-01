@@ -2,14 +2,14 @@
 # -*- shell-script -*-
 #
 # Created: Tue 29 May 2012 21:30:17 EEST too
-# Last modified: Sat 01 Mar 2014 19:11:43 +0200 too
+# Last modified: Sun 02 Mar 2014 19:25:57 +0200 too
 
 # See first ./nottoomuch-remote.rst and then maybe:
 # http://notmuchmail.org/remoteusage/
 # http://notmuchmail.org/remoteusage/124/ <- this script
 
 set -eu
-# To trace execution, uncomment next line.
+# To trace execution, uncomment next line:
 #BASH_XTRACEFD=6; exec 6>>remote-errors; echo -- >&6; set -x
 
 : ${REMOTE_NOTMUCH_SSHCTRL_SOCK:=master-notmuch@remote:22}
@@ -28,7 +28,7 @@ then exit 0
 else ev=$?
 fi
 
-# continuing here in case ssh exited with nonzero value.
+# continuing here in case ssh exited with nonzero value
 
 case $* in
  'config get user.primary_email') echo 'nobody@nowhere.invalid'; exit 0 ;;
@@ -39,7 +39,7 @@ case $* in
  'search'*'--output=tags'*) echo 'errors'; exit 0 ;;
 esac
 
-# for unhandled command line print only to stderr...
+# fallback exit handler; print only to stderr...
 exec >&2
 
 if ssh $SSH_CONTROL_ARGS -O check 0.1
