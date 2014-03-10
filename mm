@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Mon 10 Mar 2014 11:11:11 +0200 too
+# Last Modified: Mon 10 Mar 2014 23:17:56 +0200 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -164,9 +164,10 @@ do
 	esac
 done
 
-case $cc in '') echo $bn: $cm -- command not found.; exit 1
+case $cc in '') echo ${0##*/}: $cm -- command not found.; exit 1
 esac
-case $cp in '') ;; *) echo $bn: $cm -- ambiguous command: matches $cc; exit 1
+case $cp in '') ;; *)
+	echo ${0##*/}: $cm -- ambiguous command: matches $cc; exit 1
 esac
 
 unset cc cp cm
