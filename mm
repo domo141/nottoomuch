@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Mon 10 Mar 2014 23:17:56 +0200 too
+# Last Modified: Mon 17 Mar 2014 17:44:36 +0200 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -49,8 +49,8 @@ set_d0 ()
 		case $dln in /*) d0=$dln ;; *) d0=$d0/$dln; esac
 	fi
 	case $d0 in *["$IFS"]*) die "'$d0' contains whitespace!"
-	;; /*) ;; *) d0=`cd "$dn0"; pwd`
-esac
+	;; /*) ;; *) d0=`cd "$d0"; pwd`
+	esac
 }
 
 try_canon_d0 () {
@@ -119,6 +119,18 @@ cmd_frm () # Run frm-md5mdalog.pl.
 
 cmd_starfemmda5 () # startfetchmail.sh usimg md5mda; some args from env...
 {
+	case ${PORT-} in 143|993) ;; *)
+		die "PORT environment variable '${PORT-}' not '143' nor '993'"
+	esac
+	case ${KEEP-} in keep|nokeep) ;; *)
+		die "KEEP environment variable '${KEEP-}' not 'keep' nor 'nokeep'"
+	esac
+	case ${USER-} in '')
+		die "USER environment variable unset or empty"
+	esac
+	case ${SERVER-} in '')
+		die "SERVER environment variable unset or empty"
+	esac
 	set_d0
 	try_canon_d0
 	cd $HOME
