@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Mon 17 Mar 2014 17:44:36 +0200 too
+# Last Modified: Mon 17 Mar 2014 21:20:43 +0200 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -19,6 +19,8 @@ esac
 
 warn () { echo "$@"; } >&2
 die () { echo "$@"; exit 1; } >&2
+
+usage () { echo "Usage: $0 $cmd" "$@"; exit 1; } >&2
 
 x () { echo "$@" >&2; "$@"; }
 
@@ -117,26 +119,17 @@ cmd_frm () # Run frm-md5mdalog.pl.
 	exec $d0/frm-md5mdalog.pl "$@"
 }
 
-cmd_starfemmda5 () # startfetchmail.sh usimg md5mda; some args from env...
+cmd_starfemmda5 () # startfetchmail.sh using md5mda.sh mda
 {
-	case ${PORT-} in 143|993) ;; *)
-		die "PORT environment variable '${PORT-}' not '143' nor '993'"
-	esac
-	case ${KEEP-} in keep|nokeep) ;; *)
-		die "KEEP environment variable '${KEEP-}' not 'keep' nor 'nokeep'"
-	esac
-	case ${USER-} in '')
-		die "USER environment variable unset or empty"
-	esac
-	case ${SERVER-} in '')
-		die "SERVER environment variable unset or empty"
+	case $# in 4) ;; *)
+		usage '(143|993)' '(keep|nokeep)' user server
 	esac
 	set_d0
 	try_canon_d0
 	cd $HOME
 	case $d0 in $PWD/*) d0=${d0#$PWD/}; esac
 	set -x
-	exec $d0/startfetchmail.sh $PORT $KEEP $USER $SERVER \
+	exec $d0/startfetchmail.sh $@ \
 		"$d0/md5mda.sh --cd mail received wip log"
 }
 
