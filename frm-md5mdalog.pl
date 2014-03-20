@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Created: Fri Aug 19 16:53:45 2011 +0300 too
-# Last Modified: Thu 20 Mar 2014 22:49:59 +0200 too
+# Last Modified: Thu 20 Mar 2014 23:50:33 +0200 too
 
 # This program examines the log files md5mda.sh has written to
 # $HOME/mail/log directory (XXX hardcoded internally to this script)
@@ -27,9 +27,9 @@ use Encode qw/encode_utf8 find_encoding _utf8_on/;
 
 binmode STDOUT, ':utf8';
 
-sub usage () { die "Usage: $0 [-uvqf] re\n"; }
+sub usage () { die "Usage: $0 [-uvqf] [re...]\n"; }
 
-my ($updateloc, $filenames, $filesonly, $nodelwarn, $re) = (0, 0, 0, 0, '');
+my ($updateloc, $filenames, $filesonly, $nodelwarn) = (0, 0, 0, 0);
 if (@ARGV > 0 and ord($ARGV[0]) == ord('-')) {
     my $arg = $ARGV[0];
     $nodelwarn = 1 if $arg =~ s/-\w*\Kq//;
@@ -39,10 +39,8 @@ if (@ARGV > 0 and ord($ARGV[0]) == ord('-')) {
     usage unless $arg eq '-';
     shift @ARGV;
 }
-if (@ARGV > 0) {
-    my $argv = "@ARGV";
-    $re = qr/$argv/;
-}
+
+my @relist = map { qr/$_/i } @ARGV;
 
 $_ = $0; s|.*/||;
 
@@ -162,7 +160,8 @@ sub mailfrm($)
 	$sbj =~ s/=\?([^?]+\?.\?.+?)\?=/decode_data/ge;
 	_utf8_on($frm); _utf8_on($sbj); # for print widths...
 	my $line = sprintf '%-*.*s  %-.*s', $fw, $fw, $frm, $sw, $sbj;
-        if (not $re or ($line =~ $re)) {
+	sub rechk ($) { foreach (@relist) { return 0 if ($_[0] =~ $_); } 1; }
+	unless (@relist and rechk $line) {
 	    print $line, "\n" unless $filesonly;
 	    print  "    $md/$_[0]\n" if $filenames or $filesonly;
 	    print "\n" if $filenames;
