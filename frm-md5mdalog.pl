@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Created: Fri Aug 19 16:53:45 2011 +0300 too
-# Last Modified: Fri 21 Feb 2014 21:44:37 +0200 too
+# Last Modified: Thu 20 Mar 2014 22:49:59 +0200 too
 
 # This program examines the log files md5mda.sh has written to
 # $HOME/mail/log directory (XXX hardcoded internally to this script)
@@ -14,6 +14,10 @@
 #
 # ( cd $HOME/bin; ln -s path/to/frm-md5mdalog.pl frm ) may be useful...
 
+# elegance is not a strong point in this program; hacked on the need basis...
+# maybe when the desired set of features is known this will be polished.
+
+use 5.10.0;
 use strict;
 use warnings;
 
@@ -23,12 +27,21 @@ use Encode qw/encode_utf8 find_encoding _utf8_on/;
 
 binmode STDOUT, ':utf8';
 
-my ($updateloc, $filenames) = (0, 0);
+sub usage () { die "Usage: $0 [-uvqf] re\n"; }
+
+my ($updateloc, $filenames, $filesonly, $nodelwarn, $re) = (0, 0, 0, 0, '');
+if (@ARGV > 0 and ord($ARGV[0]) == ord('-')) {
+    my $arg = $ARGV[0];
+    $nodelwarn = 1 if $arg =~ s/-\w*\Kq//;
+    $updateloc = 1 if $arg =~ s/-\w*\Ku//;
+    $filenames = 1 if $arg =~ s/-\w*\Kv//;
+    $filesonly = 1 if $arg =~ s/-\w*\Kf//;
+    usage unless $arg eq '-';
+    shift @ARGV;
+}
 if (@ARGV > 0) {
-    $updateloc = 1 if $ARGV[0] eq '-u';
-    $filenames = 1 if $ARGV[0] eq '-v';
-    die "Usage: $0 [-uv]\n"
-	if @ARGV > 1 or $updateloc == 0 and $filenames == 0;
+    my $argv = "@ARGV";
+    $re = qr/$argv/;
 }
 
 $_ = $0; s|.*/||;
@@ -76,6 +89,14 @@ else {
 }
 
 die "No log files to dig mail files from...\n" unless @logfiles;
+
+my $frmllnk = readlink 'log/md5mda-frmlast';
+my ($frmlast, $frmloff);
+if (defined $frmllnk && $frmllnk) {
+    ($frmlast = $frmllnk) =~ s/^(\d+),(\d+)$/log\/md5mda-$1.log/;
+    $frmloff = $2 if defined $2;
+}
+#print $frmlast, ',', $frmloff, "\n";
 
 my $cols = int(qx{stty -a | sed -n 's/.*columns //; T; s/;.*//p'} + 0);
 $cols = 80 unless ($cols);  #print "Columns: $cols.\n";
@@ -130,7 +151,7 @@ sub mailfrm($)
     }
 
     $dte =~ s/ (\d\d\d\d).*/ $1/; $dte =~ s/\s(0|\s)/ /g;
-    $odate = $dte, print "*** $dte\n" if $dte ne $odate;
+    $odate = $dte, print "*** $dte\n" if $dte ne $odate and not $filesonly;
 
     $sbj = "<missing in $_[0] >" unless defined $sbj;
     #$frm = "<missing in $_[0] >" unless defined $frm;
@@ -140,8 +161,12 @@ sub mailfrm($)
 	$frm =~ s/=\?([^?]+\?.\?.+?)\?=/decode_data/ge;
 	$sbj =~ s/=\?([^?]+\?.\?.+?)\?=/decode_data/ge;
 	_utf8_on($frm); _utf8_on($sbj); # for print widths...
-	printf "%-*.*s  %-*.*s\n", $fw, $fw, $frm, $sw, $sw, $sbj;
-	print  "    $md/$_[0]\n\n" if $filenames;
+	my $line = sprintf '%-*.*s  %-.*s', $fw, $fw, $frm, $sw, $sbj;
+        if (not $re or ($line =~ $re)) {
+	    print $line, "\n" unless $filesonly;
+	    print  "    $md/$_[0]\n" if $filenames or $filesonly;
+	    print "\n" if $filenames;
+	}
     }
     $mails += 1;
 }
@@ -151,7 +176,7 @@ my $omio = $mio;
 my $cmio;
 foreach (@logfiles) {
     $mdlf = $_;
-    print "Opening $mdlf... (offset $mio)\n";
+    print "Opening $mdlf... (offset $mio)\n" unless $filesonly;
     open L, '<', $_ or die "Cannot open '$mdlf': $!\n";
     seek L, $mio, 0 if $mio > 0;
 
@@ -159,7 +184,9 @@ foreach (@logfiles) {
     {
 	$mio += length;
 	if (m|'(.*)'\s*$|) {
-	    open I, '<', "$1" or do { print " ** $1: deleted **\n"; next; };
+	    open I, '<', "$1" or do {
+		print "    ** $1: deleted **\n" unless $nodelwarn; next;
+	    };
 	    my $f = $1;
 	    mailfrm $f;
 	    close I;
@@ -170,14 +197,29 @@ foreach (@logfiles) {
     $mio = 0;
 }
 
-if ($updateloc and ($cmio != $omio or @logfiles > 1)) {
-    my @lt = localtime;
-    my @wds = qw/Sun Mon Tue Wed Thu Fri Sat Sun/;
-    my $date = sprintf("%d-%02d-%02d (%s) %02d:%02d:%02d",
-		       $lt[5] + 1900, $lt[4] + 1, $lt[3], $wds[$lt[6]],
-		       $lt[2], $lt[1], $lt[0]);
-    open O, '>>', 'log/md5mda-frmloc';
-    $mdlf =~ s/log\///;
-    syswrite O, "$date  $mdlf  $cmio\n";
-    close O;
+if ($cmio != $omio or @logfiles > 1) {
+
+    $mdlf =~ /md5mda-(\d+)/;
+    my $newlink = "$1,$cmio";
+    if (not defined $frmllnk or $newlink ne $frmllnk) {
+	unlink 'log/md5mda-frmlast';
+	symlink "$1,$cmio", 'log/md5mda-frmlast';
+    }
+
+    if ($updateloc) {
+	my @lt = localtime;
+	my @wds = qw/Sun Mon Tue Wed Thu Fri Sat Sun/;
+	my $date = sprintf("%d-%02d-%02d (%s) %02d:%02d:%02d",
+			   $lt[5] + 1900, $lt[4] + 1, $lt[3], $wds[$lt[6]],
+			   $lt[2], $lt[1], $lt[0]);
+	open O, '>>', 'log/md5mda-frmloc';
+	$mdlf =~ s/log\///;
+	syswrite O, "$date  $mdlf  $cmio\n";
+	print "Offset updated to $mdlf: $cmio\n" unless $filesonly;
+	close O;
+    }
+    elsif (not $filesonly and not $nodelwarn and defined $frmloff
+	   and $mdlf eq $frmlast and $frmloff eq $cmio) {
+	print "** All of the above seen before.\n";
+    }
 }

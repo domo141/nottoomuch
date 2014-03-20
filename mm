@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Mon 17 Mar 2014 21:20:43 +0200 too
+# Last Modified: Thu 20 Mar 2014 22:46:27 +0200 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -17,12 +17,28 @@ case ~ in '~') exec >&2; echo
 	exit 1
 esac
 
+case ${BASH_VERSION-} in *.*) shopt -s xpg_echo; esac
+case ${ZSH_VERSION-} in *.*) setopt shwordsplit no_nomatch; esac
+
 warn () { echo "$@"; } >&2
 die () { echo "$@"; exit 1; } >&2
 
 usage () { echo "Usage: $0 $cmd" "$@"; exit 1; } >&2
 
 x () { echo "$@" >&2; "$@"; }
+
+yesno ()
+{
+	echo
+	case ${KSH_VERSION-} in
+	 '')	echo	"$* (yes/NO)? \\c" ;;
+	 *)	echo -e	"$* (yes/NO)? \\c" ;;
+	esac
+	read ans
+	echo
+	case $ans in ([yY][eE][sS]) return 0; esac
+	return 1
+}  </dev/tty
 
 cmd_source () # Display source of given $0 command (or function).
 {
@@ -116,7 +132,12 @@ cmd_new () # Import new mail.
 cmd_frm () # Run frm-md5mdalog.pl.
 {
 	set_d0
-	exec $d0/frm-md5mdalog.pl "$@"
+	case ${1-} in -D) ;; *) exec $d0/frm-md5mdalog.pl "$@" ;; esac
+	case $# in 1) usage -D match-re ;; esac
+	shift
+	$d0/frm-md5mdalog.pl -q "$@"
+	yesno "Delete the messages listed above"
+	$d0/frm-md5mdalog.pl -qf "$@" | xargs rm -fv
 }
 
 cmd_starfemmda5 () # startfetchmail.sh using md5mda.sh mda
