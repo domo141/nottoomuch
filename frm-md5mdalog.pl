@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Created: Fri Aug 19 16:53:45 2011 +0300 too
-# Last Modified: Thu 20 Mar 2014 23:50:33 +0200 too
+# Last Modified: Fri 21 Mar 2014 17:32:35 +0200 too
 
 # This program examines the log files md5mda.sh has written to
 # $HOME/mail/log directory (XXX hardcoded internally to this script)
@@ -219,6 +219,9 @@ if ($cmio != $omio or @logfiles > 1) {
     }
     elsif (not $filesonly and not $nodelwarn and defined $frmloff
 	   and $mdlf eq $frmlast and $frmloff eq $cmio) {
-	print "** All of the above seen before.\n";
+	my @l = lstat 'log/md5mda-frmlast';
+	@l = localtime $l[9];
+	my @d = qw/Sun Mon Tue Wed Thu Fri Sat Sun/;
+	print "** All of the above seen before ($d[$l[6]] $l[2]:$l[1]).\n";
     }
 }
