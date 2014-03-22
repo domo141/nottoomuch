@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Thu 20 Mar 2014 22:46:27 +0200 too
+# Last Modified: Sat 22 Mar 2014 14:05:42 +0200 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -140,10 +140,10 @@ cmd_frm () # Run frm-md5mdalog.pl.
 	$d0/frm-md5mdalog.pl -qf "$@" | xargs rm -fv
 }
 
-cmd_starfemmda5 () # startfetchmail.sh using md5mda.sh mda
+cmd_startfemmda5 () # startfetchmail.sh using md5mda.sh mda
 {
-	case $# in 4) ;; *)
-		usage '(143|993)' '(keep|nokeep)' user server
+	case $# in 4|5) ;; *)
+		usage '[-I]' '(143|993)' '(keep|nokeep)' user server
 	esac
 	set_d0
 	try_canon_d0
