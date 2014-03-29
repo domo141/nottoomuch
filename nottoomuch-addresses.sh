@@ -9,7 +9,7 @@ exit $?
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Mon 05 Mar 2012 11:47:28 EET too
+# Last modified: Sat 29 Mar 2014 17:12:14 +0200 too
 
 # Add this to your notmuch elisp configuration file:
 #
@@ -25,7 +25,7 @@ exit $?
 
 # HISTORY
 #
-# Version wip  2012-xx-xx xx:xx:xx UTC (polish!)
+# Version 2.2  2014-03-29 15:12:14 UTC
 #   * In case there is both {phrase} and (comment) in an email address,
 #     append comment to the phrase. This will make more duplicates to be
 #     removed. Now there can be:
@@ -446,7 +446,7 @@ B<nottoomuch-addresses.sh --help>  for more help
 
 =head1 VERSION
 
-wip (2012-xx-xx)
+2.2 (2014-03-29)
 
 =head1 OPTIONS
 
