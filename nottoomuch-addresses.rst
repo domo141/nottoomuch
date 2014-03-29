@@ -13,7 +13,7 @@ The matching part is very fast.
 How To Install
 --------------
 
-1. Copy `nottooomuch-addresses.sh <nottoomuch-addresses.sh>`_  to the machine
+1. Copy `nottoomuch-addresses.sh <nottoomuch-addresses.sh>`_  to the machine
    you're running notmuch and find suitable location for it.
 
 2. Run ``/path/to/nottoomuch-addresses.sh --update``
