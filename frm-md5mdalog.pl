@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Created: Fri Aug 19 16:53:45 2011 +0300 too
-# Last Modified: Tue 01 Apr 2014 19:41:15 +0300 too
+# Last Modified: Tue 01 Apr 2014 21:10:40 +0300 too
 
 # This program examines the log files md5mda.sh has written to
 # $HOME/mail/log directory (XXX hardcoded internally to this script)
@@ -228,6 +228,7 @@ if ($cmio != $omio or @logfiles > 1) {
 	my @l = lstat 'log/md5mda-frmlast';
 	@l = localtime $l[9];
 	my @d = qw/Sun Mon Tue Wed Thu Fri Sat Sun/;
-	print "*** No new mail since last frm run ($d[$l[6]] $l[2]:$l[1]).\n";
+	my $time = sprintf '%02d:%02d', $l[2], $l[1];
+	print "*** No new mail since last frm run ($d[$l[6]] $time).\n";
     }
 }

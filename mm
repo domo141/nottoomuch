@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Sat 22 Mar 2014 14:05:42 +0200 too
+# Last Modified: Tue 01 Apr 2014 19:57:34 +0300 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -135,6 +135,7 @@ cmd_frm () # Run frm-md5mdalog.pl.
 	case ${1-} in -D) ;; *) exec $d0/frm-md5mdalog.pl "$@" ;; esac
 	case $# in 1) usage -D match-re ;; esac
 	shift
+	echo; echo
 	$d0/frm-md5mdalog.pl -q "$@"
 	yesno "Delete the messages listed above"
 	$d0/frm-md5mdalog.pl -qf "$@" | xargs rm -fv
