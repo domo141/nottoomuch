@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Created: Fri Aug 19 16:53:45 2011 +0300 too
-# Last Modified: Tue 25 Mar 2014 18:29:41 +0200 too
+# Last Modified: Tue 01 Apr 2014 19:41:15 +0300 too
 
 # This program examines the log files md5mda.sh has written to
 # $HOME/mail/log directory (XXX hardcoded internally to this script)
@@ -172,7 +172,7 @@ sub mailfrm($)
 
 
 my $omio = $mio;
-my $cmio;
+my ($cmio, $ltime);
 foreach (@logfiles) {
     $mdlf = $_;
     print "Opening $mdlf... (offset $mio)\n" unless $filesonly;
@@ -182,11 +182,12 @@ foreach (@logfiles) {
     while (<L>)
     {
 	$mio += length;
-	if (m|'(.*)'\s*$|) {
-	    open I, '<', "$1" or do {
-		print "    ** $1: deleted **\n" unless $nodelwarn; next;
+	if (m|(\w\w\w. \d\d:\d\d).*'(.*)'\s*$|) {
+	    $ltime = $1;
+	    open I, '<', "$2" or do {
+		print "    ** $2: deleted **\n" unless $nodelwarn; next;
 	    };
-	    my $f = $1;
+	    my $f = $2;
 	    mailfrm $f;
 	    close I;
 	}
@@ -194,6 +195,11 @@ foreach (@logfiles) {
     close L;
     $cmio = $mio;
     $mio = 0;
+}
+
+if (defined $ltime and ! $filesonly) {
+    $ltime =~ tr/)//d;
+    print "*** Last mail received: $ltime.\n";
 }
 
 if ($cmio != $omio or @logfiles > 1) {
