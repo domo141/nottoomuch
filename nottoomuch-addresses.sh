@@ -9,7 +9,7 @@ exit $?
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Fri 04 Apr 2014 19:44:20 +0300 too
+# Last modified: Fri 04 Apr 2014 20:47:05 +0300 too
 
 # Add this to your notmuch elisp configuration file:
 #
@@ -153,6 +153,19 @@ sub mkdirs($) {
 
 mkdirs $configdir unless -d $configdir;
 
+my $sincetime;
+if (defined $o_hash{since}) {
+    my $since = $o_hash{since};
+      die "Option '--since' value format: YYYY-MM-DD\n"
+	unless $since =~ /^(\d\d\d\d)-(\d\d)-(\d\d)$/;
+    $sincetime = timelocal(0, 0, 0, $3, $2, $1);
+    die "Since dates before Jan 1-2, 1970 not supported.\n" if $sincetime < 0;
+}
+else {
+    $sincetime = -1;
+}
+
+# all arg checks done before this line!
 unlink $adbpath if $o_rebuild;
 
 my ($sstr, $acount) = (0, 0);
@@ -168,19 +181,14 @@ if (-s $adbpath) {
 }
 if ($sstr > 0) {
     print "Updating '$adbpath', since $sstr.\n";
-    print "Option '--since' ignored due to update.\n" if defined $o_hash{since};
+    print "Option '--since' ignored due to update.\n" if $sincetime >= 0;
     $sstr .= '..';
 }
 else {
     print "Creating '$adbpath'. This may take some time...\n";
-    if (defined $o_hash{since}) {
-	my $since = $o_hash{since};
-	die "Option '--since' value format: YYYY-MM-DD\n"
-	  unless $since =~ /^(\d\d\d\d)-(\d\d)-(\d\d)$/;
-	my $time = timelocal(0, 0, 0, $3, $2, $1);
-	die "Since dates before Jan 1-2, 1970 not supported.\n" if $time < 0;
-	print "Reading addresses from mails since $since.\n";
-	$sstr = "$time..";
+    if ($sincetime >= 0) {
+	print "Reading addresses from mails since $o_hash{since}.\n";
+	$sstr = "$sincetime..",
     }
     else {  $sstr = '*'; }
 }
