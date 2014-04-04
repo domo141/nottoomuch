@@ -9,7 +9,7 @@ exit $?
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Sat 29 Mar 2014 17:12:14 +0200 too
+# Last modified: Fri 04 Apr 2014 18:57:48 +0300 too
 
 # Add this to your notmuch elisp configuration file:
 #
@@ -103,124 +103,129 @@ unless (@ARGV)
     exit 1;
 }
 
-if ($ARGV[0] eq '--help')
-{
-    $SIG{__DIE__} = sub {
-     	$SIG{__DIE__} = 'DEFAULT';
-     	require Pod::Usage;
-     	Pod::Usage::pod2usage( -verbose => 2, -exitval => 0, -noperldoc => 1 );
-     	exit 1;
-    };
-    require Pod::Perldoc;
-    $SIG{__DIE__} = 'DEFAULT';
-    # in case PAGER is not set, perldoc runs /usr/bin/perl -isr ...
-    if ( ($ENV{PAGER} || '') eq 'less') {
-	$ENV{LESS} .= 'R' if ($ENV{LESS} || '') !~ /[rR]/;
-    }
-    @ARGV = ( $0 );
-    exit ( Pod::Perldoc->run() );
-}
+my ($o_update, $o_rebuild) = (0, 0);
 
+foreach (@ARGV) {
+    $o_update = 1, next if $_ eq '--update';
+    $o_rebuild = 1, next if $_ eq '--rebuild';
+
+    if ($_ eq '--help') {
+	$SIG{__DIE__} = sub {
+	    $SIG{__DIE__} = 'DEFAULT';
+	    require Pod::Usage;
+	    Pod::Usage::pod2usage(-verbose => 2,-exitval => 0,-noperldoc => 1);
+	    exit 1;
+	};
+	require Pod::Perldoc;
+	$SIG{__DIE__} = 'DEFAULT';
+	# in case PAGER is not set, perldoc runs /usr/bin/perl -isr ...
+	if ( ($ENV{PAGER} || '') eq 'less') {
+	    $ENV{LESS} .= 'R' if ($ENV{LESS} || '') !~ /[rR]/;
+	}
+	@ARGV = ( $0 );
+	exit ( Pod::Perldoc->run() );
+    }
+    #s/-+//;
+    die "$0: '$ARGV[0]': unknown option.\n";
+}
 my @list;
 
-if ($ARGV[0] eq '--update')
-{
-    sub mkdirs($);
-    sub mkdirs($) {
-	die "'$_[0]': not a (writable) directory\n" if -e $_[0];
-	return if mkdir $_[0]; # no mode: 0777 & ~umask used
-	local $_ = $_[0];
-	mkdirs $_ if s|/?[^/]+$|| and $_;
-	mkdir $_[0] or die "Cannot create '$_[0]': $!\n";
-    }
+sub mkdirs($);
+sub mkdirs($) {
+    die "'$_[0]': not a (writable) directory\n" if -e $_[0];
+    return if mkdir $_[0]; # no mode: 0777 & ~umask used
+    local $_ = $_[0];
+    mkdirs $_ if s|/?[^/]+$|| and $_;
+    mkdir $_[0] or die "Cannot create '$_[0]': $!\n";
+}
 
-    mkdirs $configdir unless -d $configdir;
+mkdirs $configdir unless -d $configdir;
 
-    unlink $adbpath if defined $ARGV[1] and $ARGV[1] eq '--rebuild';
+unlink $adbpath if $o_rebuild;
 
-    my ($sstr, $acount) = (0, 0);
-    if (-s $adbpath) {
-	die "Cannot open '$adbpath': $!\n" unless open I, '<', $adbpath;
-	sysread I, $_, 18;
-	# new header: "v4/dd/dd/dd/dd/dd\n" where / == '\t' (but match also v2)
-	if (/^v[234]\s(\d\d)\s(\d\d)\s(\d\d)\s(\d\d)\s(\d\d)\n$/) {
-	    $sstr = "$1$2$3$4$5" - 86400 * 7; # one week extra to (re)look.
-	    $sstr = 0 if $sstr < 0;
-	}
-	close I if $sstr == 0;
+my ($sstr, $acount) = (0, 0);
+if (-s $adbpath) {
+    die "Cannot open '$adbpath': $!\n" unless open I, '<', $adbpath;
+    sysread I, $_, 18;
+    # new header: "v4/dd/dd/dd/dd/dd\n" where / == '\t' (but match also v2)
+    if (/^v[234]\s(\d\d)\s(\d\d)\s(\d\d)\s(\d\d)\s(\d\d)\n$/) {
+	$sstr = "$1$2$3$4$5" - 86400 * 7; # one week extra to (re)look.
+	$sstr = 0 if $sstr < 0;
     }
-    if ($sstr > 0) {
-	print "Updating '$adbpath', since $sstr.\n";
-	$sstr .= '..';
-    }
-    else {
-	print "Creating '$adbpath'. This may take some time...\n";
-	$sstr = '*';
-    }
-    my (%ign_hash, @ign_relist);
-    if (-f $ignpath) {
-	die "Cannot open '$ignpath': $!\n" unless open J, '<', $ignpath;
-	while (<J>) {
-	    next if /^\s*#/;
-	    if (m|^/(.*)/(\w*)\s*$|) {
-		if ($2 eq 'i') {
-		    push @ign_relist, qr/$1/i;
-		}
-		else {
-		    push @ign_relist, qr/$1/;
-		}
+    close I if $sstr == 0;
+}
+if ($sstr > 0) {
+    print "Updating '$adbpath', since $sstr.\n";
+    $sstr .= '..';
+}
+else {
+    print "Creating '$adbpath'. This may take some time...\n";
+    $sstr = '*';
+}
+my (%ign_hash, @ign_relist);
+if (-f $ignpath) {
+    die "Cannot open '$ignpath': $!\n" unless open J, '<', $ignpath;
+    while (<J>) {
+	next if /^\s*#/;
+	if (m|^/(.*)/(\w*)\s*$|) {
+	    if ($2 eq 'i') {
+		push @ign_relist, qr/$1/i;
 	    }
 	    else {
-		s/\s+$/\n/;
-		$ign_hash{$_} = 1;
+		push @ign_relist, qr/$1/;
 	    }
 	}
-	close J;
+	else {
+	    s/\s+$/\n/;
+	    $ign_hash{$_} = 1;
+	}
     }
+    close J;
+}
 
-    my $sometime = time;
-    die "Cannot open '$adbpath.new': $!\n" unless open O, '>', $adbpath.'.new';
-    die "Cannot open '$actpath.new': $!\n" unless open A, '>', $actpath.'.new';
-    $_ = $sometime; s/(..)\B/$1\t/g; # FYI: s/..\B\K/\t/g requires perl 5.10.
-    print O "v4\t$_\n";
+my $sometime = time;
+die "Cannot open '$adbpath.new': $!\n" unless open O, '>', $adbpath.'.new';
+die "Cannot open '$actpath.new': $!\n" unless open A, '>', $actpath.'.new';
+$_ = $sometime; s/(..)\B/$1\t/g; # FYI: s/..\B\K/\t/g requires perl 5.10.
+print O "v4\t$_\n";
 
-    # The following code block is from Email::Address, almost verbatim.
-    # The reasons to snip code I instead of just 'use Email::Address' are:
-    #  1) Some systems ship Mail::Address instead of Email::Address
-    #  2) Every user doesn't have ability to install Email::Address
-    # --8<----8<----8<----8<----8<----8<----8<----8<----8<----8<----8<--
+# The following code block is from Email::Address, almost verbatim.
+# The reasons to snip code I instead of just 'use Email::Address' are:
+#  1) Some systems ship Mail::Address instead of Email::Address
+#  2) Every user doesn't have ability to install Email::Address
+# --8<----8<----8<----8<----8<----8<----8<----8<----8<----8<----8<--
 
-    ## no critic RequireUseWarnings
-    # support pre-5.6
+## no critic RequireUseWarnings
+# support pre-5.6
 
-    #$VERSION             = '1.889';
-    my $COMMENT_NEST_LEVEL = 2;
+#$VERSION             = '1.889';
+my $COMMENT_NEST_LEVEL = 2;
 
-    my $CTL            = q{\x00-\x1F\x7F};
-    my $special        = q{()<>\\[\\]:;@\\\\,."};
+my $CTL            = q{\x00-\x1F\x7F};
+my $special        = q{()<>\\[\\]:;@\\\\,."};
 
-    my $text           = qr/[^\x0A\x0D]/;
+my $text           = qr/[^\x0A\x0D]/;
 
-    my $quoted_pair    = qr/\\$text/;
+my $quoted_pair    = qr/\\$text/;
 
-    my $ctext          = qr/(?>[^()\\]+)/;
-    my ($ccontent, $comment) = (q{})x2;
-    for (1 .. $COMMENT_NEST_LEVEL) {
-	$ccontent = qr/$ctext|$quoted_pair|$comment/;
-	$comment  = qr/\s*\((?:\s*$ccontent)*\s*\)\s*/;
-    }
-    my $cfws           = qr/$comment|\s+/;
+my $ctext          = qr/(?>[^()\\]+)/;
+my ($ccontent, $comment) = (q{})x2;
+for (1 .. $COMMENT_NEST_LEVEL) {
+    $ccontent = qr/$ctext|$quoted_pair|$comment/;
+    $comment  = qr/\s*\((?:\s*$ccontent)*\s*\)\s*/;
+}
+my $cfws           = qr/$comment|\s+/;
 
-    my $atext          = qq/[^$CTL$special\\s]/;
-    my $atom           = qr/$cfws*$atext+$cfws*/;
-    my $dot_atom_text  = qr/$atext+(?:\.$atext+)*/;
-    my $dot_atom       = qr/$cfws*$dot_atom_text$cfws*/;
+my $atext          = qq/[^$CTL$special\\s]/;
+my $atom           = qr/$cfws*$atext+$cfws*/;
+my $dot_atom_text  = qr/$atext+(?:\.$atext+)*/;
+my $dot_atom       = qr/$cfws*$dot_atom_text$cfws*/;
 
-    my $qtext          = qr/[^\\"]/;
-    my $qcontent       = qr/$qtext|$quoted_pair/;
-    my $quoted_string  = qr/$cfws*"$qcontent+"$cfws*/;
+my $qtext          = qr/[^\\"]/;
+my $qcontent       = qr/$qtext|$quoted_pair/;
+my $quoted_string  = qr/$cfws*"$qcontent+"$cfws*/;
 
-    my $word           = qr/$atom|$quoted_string/;
+my $word           = qr/$atom|$quoted_string/;
 
 # XXX: This ($phrase) used to just be: my $phrase = qr/$word+/; It was changed
 # to resolve bug 22991, creating a significant slowdown.  Given current speed
@@ -234,39 +239,39 @@ if ($ARGV[0] eq '--update')
 # So we disallow the hateful CFWS in this context for now.  Of modern mail
 # agents, only Apple Web Mail 2.0 is known to produce obs-phrase.
 # -- rjbs, 2006-11-19
-    my $simple_word    = qr/$atom|\.|\s*"$qcontent+"\s*/;
-    my $obs_phrase     = qr/$simple_word+/;
+my $simple_word    = qr/$atom|\.|\s*"$qcontent+"\s*/;
+my $obs_phrase     = qr/$simple_word+/;
 
-    my $phrase         = qr/$obs_phrase|(?:$word+)/;
+my $phrase         = qr/$obs_phrase|(?:$word+)/;
 
-    my $local_part     = qr/$dot_atom|$quoted_string/;
-    my $dtext          = qr/[^\[\]\\]/;
-    my $dcontent       = qr/$dtext|$quoted_pair/;
-    my $domain_literal = qr/$cfws*\[(?:\s*$dcontent)*\s*\]$cfws*/;
-    my $domain         = qr/$dot_atom|$domain_literal/;
+my $local_part     = qr/$dot_atom|$quoted_string/;
+my $dtext          = qr/[^\[\]\\]/;
+my $dcontent       = qr/$dtext|$quoted_pair/;
+my $domain_literal = qr/$cfws*\[(?:\s*$dcontent)*\s*\]$cfws*/;
+my $domain         = qr/$dot_atom|$domain_literal/;
 
-    my $display_name   = $phrase;
+my $display_name   = $phrase;
 
-    my $addr_spec  = qr/$local_part\@$domain/;
-    my $angle_addr = qr/$cfws*<$addr_spec>$cfws*/;
-    my $name_addr  = qr/$display_name?$angle_addr/;
-    my $mailbox    = qr/(?:$name_addr|$addr_spec)$comment*/;
+my $addr_spec  = qr/$local_part\@$domain/;
+my $angle_addr = qr/$cfws*<$addr_spec>$cfws*/;
+my $name_addr  = qr/$display_name?$angle_addr/;
+my $mailbox    = qr/(?:$name_addr|$addr_spec)$comment*/;
 
-    # --8<----8<----8<----8<----8<----8<----8<----8<----8<----8<----8<--
+# --8<----8<----8<----8<----8<----8<----8<----8<----8<----8<----8<--
 
-    # In this particular purpose the cache code used in...
-    my %seen; # ...Email::Address is "replaced" by %seen & %hash.
-    my %hash;
+# In this particular purpose the cache code used in...
+my %seen; # ...Email::Address is "replaced" by %seen & %hash.
+my %hash;
 
-    my $ptime = $sometime + 5;
-    my $addrcount = 0;
-    $| = 1;
-    open P, '-|', qw/notmuch search --sort=newest-first --output=files/, $sstr;
-    while (<P>) {
-      chomp;
-      open M, '<', $_ or next;
+my $ptime = $sometime + 5;
+my $addrcount = 0;
+$| = 1;
+open P, '-|', qw/notmuch search --sort=newest-first --output=files/, $sstr;
+while (<P>) {
+    chomp;
+    open M, '<', $_ or next;
 
-      while (<M>) {
+    while (<M>) {
 	last if /^\s*$/;
 	next unless s/^(From|To|Cc|Bcc):\s+//i;
 	s/\s+$//;
@@ -296,7 +301,7 @@ if ($ARGV[0] eq '--update')
 	s/[ \t]+/ /g;
 	s/\?= =\?/\?==\?/g;
 	my (@mailboxes) = (/$mailbox/go);
-	L: foreach (@mailboxes) {
+      L: foreach (@mailboxes) {
 	    next if $seen{$_};
 	    $seen{$_} = 1;
 
@@ -386,49 +391,46 @@ if ($ARGV[0] eq '--update')
 	    $addrcount++;
 	}
 	# --8<----8<----8<----8<----8<----8<----8<----8<----8<----8<----8<--
-      }
-      close M;
     }
-    undef %seen;
-    close P;
-    my $oldaddrcount = 0;
-    if ($sstr ne '*') {
-	L: while (<I>) {
-	    last if /^---/;
-	    next if defined $hash{$_};
-	    print O $_;
-	    next if defined $ign_hash{$_};
-	    foreach my $re (@ign_relist) {
-		next L if $_ =~ $re;
-	    }
-	    print A $_;
-	    $addrcount++;
-	}
-	while (<I>) {
-	    $oldaddrcount = ($1 + 0), next if /^active:\s+(\d+)\s*$/;
-	}
-	close I;
-    }
-    print O "---\n";
-    print O "active: ", $addrcount, "\n";
-    close O;
-    close A;
-    undef %hash;
-    #link $adbpath, $adbpath . '.' . $sometime;
-    rename $adbpath . '.new', $adbpath or
-      die "Cannot rename '$adbpath.new' to '$adbpath': $!\n";
-    rename $actpath . '.new', $actpath or
-      die "Cannot rename '$actpath.new' to '$actpath': $!\n";
-    if ($oldaddrcount or $sstr eq '*') {
-	$sometime = time - $sometime;
-	my $new = $addrcount - $oldaddrcount;
-	print "Added $new active addresses in $sometime seconds.\n";
-    }
-    print "Total number of active addresses: $addrcount.\n";
-    exit 0;
+    close M;
 }
-
-die "$0: '$ARGV[0]': unknown option.\n";
+undef %seen;
+close P;
+my $oldaddrcount = 0;
+if ($sstr ne '*') {
+  L: while (<I>) {
+	last if /^---/;
+	next if defined $hash{$_};
+	print O $_;
+	next if defined $ign_hash{$_};
+	foreach my $re (@ign_relist) {
+	    next L if $_ =~ $re;
+	}
+	print A $_;
+	$addrcount++;
+    }
+    while (<I>) {
+	$oldaddrcount = ($1 + 0), next if /^active:\s+(\d+)\s*$/;
+    }
+    close I;
+}
+print O "---\n";
+print O "active: ", $addrcount, "\n";
+close O;
+close A;
+undef %hash;
+#link $adbpath, $adbpath . '.' . $sometime;
+rename $adbpath . '.new', $adbpath or
+  die "Cannot rename '$adbpath.new' to '$adbpath': $!\n";
+rename $actpath . '.new', $actpath or
+  die "Cannot rename '$actpath.new' to '$actpath': $!\n";
+if ($oldaddrcount or $sstr eq '*') {
+    $sometime = time - $sometime;
+    my $new = $addrcount - $oldaddrcount;
+    print "Added $new active addresses in $sometime seconds.\n";
+}
+print "Total number of active addresses: $addrcount.\n";
+exit 0;
 
 __END__
 
