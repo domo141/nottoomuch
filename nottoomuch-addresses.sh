@@ -9,7 +9,7 @@ exit $?
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Fri 04 Apr 2014 20:47:05 +0300 too
+# Last modified: Fri 04 Apr 2014 21:09:37 +0300 too
 
 # Add this to your notmuch elisp configuration file:
 #
@@ -140,19 +140,6 @@ die "$0: Value missing for option '--$ohk'\n" if defined $ohk;
 die "For safety precaution, option '--update' must always be present.\n"
   unless $o_update;
 
-my @list;
-
-sub mkdirs($);
-sub mkdirs($) {
-    die "'$_[0]': not a (writable) directory\n" if -e $_[0];
-    return if mkdir $_[0]; # no mode: 0777 & ~umask used
-    local $_ = $_[0];
-    mkdirs $_ if s|/?[^/]+$|| and $_;
-    mkdir $_[0] or die "Cannot create '$_[0]': $!\n";
-}
-
-mkdirs $configdir unless -d $configdir;
-
 my $sincetime;
 if (defined $o_hash{since}) {
     my $since = $o_hash{since};
@@ -166,6 +153,19 @@ else {
 }
 
 # all arg checks done before this line!
+my @list;
+
+sub mkdirs($);
+sub mkdirs($) {
+    die "'$_[0]': not a (writable) directory\n" if -e $_[0];
+    return if mkdir $_[0]; # no mode: 0777 & ~umask used
+    local $_ = $_[0];
+    mkdirs $_ if s|/?[^/]+$|| and $_;
+    mkdir $_[0] or die "Cannot create '$_[0]': $!\n";
+}
+
+mkdirs $configdir unless -d $configdir;
+
 unlink $adbpath if $o_rebuild;
 
 my ($sstr, $acount) = (0, 0);
