@@ -9,7 +9,7 @@ exit $?
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Fri 04 Apr 2014 18:57:48 +0300 too
+# Last modified: Fri 04 Apr 2014 19:44:20 +0300 too
 
 # Add this to your notmuch elisp configuration file:
 #
@@ -89,6 +89,8 @@ use Encode qw/encode_utf8 find_encoding/;
 use MIME::Base64 'decode_base64';
 use MIME::QuotedPrint 'decode_qp';
 
+use Time::Local;
+
 no encoding;
 
 my $configdir = ($ENV{XDG_CONFIG_HOME}||$ENV{HOME}.'/.config').'/nottoomuch';
@@ -104,10 +106,14 @@ unless (@ARGV)
 }
 
 my ($o_update, $o_rebuild) = (0, 0);
-
+my $ohk;
+my %o_hash;
 foreach (@ARGV) {
+    $o_hash{$ohk} = $_, undef $ohk, next if defined $ohk;
     $o_update = 1, next if $_ eq '--update';
     $o_rebuild = 1, next if $_ eq '--rebuild';
+    $ohk = 'since', next if $_ eq '--since';
+    $o_hash{'since'} = $1, next if $_ =~ /^--since=(.*)/;
 
     if ($_ eq '--help') {
 	$SIG{__DIE__} = sub {
@@ -128,6 +134,12 @@ foreach (@ARGV) {
     #s/-+//;
     die "$0: '$ARGV[0]': unknown option.\n";
 }
+
+die "$0: Value missing for option '--$ohk'\n" if defined $ohk;
+
+die "For safety precaution, option '--update' must always be present.\n"
+  unless $o_update;
+
 my @list;
 
 sub mkdirs($);
@@ -156,11 +168,21 @@ if (-s $adbpath) {
 }
 if ($sstr > 0) {
     print "Updating '$adbpath', since $sstr.\n";
+    print "Option '--since' ignored due to update.\n" if defined $o_hash{since};
     $sstr .= '..';
 }
 else {
     print "Creating '$adbpath'. This may take some time...\n";
-    $sstr = '*';
+    if (defined $o_hash{since}) {
+	my $since = $o_hash{since};
+	die "Option '--since' value format: YYYY-MM-DD\n"
+	  unless $since =~ /^(\d\d\d\d)-(\d\d)-(\d\d)$/;
+	my $time = timelocal(0, 0, 0, $3, $2, $1);
+	die "Since dates before Jan 1-2, 1970 not supported.\n" if $time < 0;
+	print "Reading addresses from mails since $since.\n";
+	$sstr = "$time..";
+    }
+    else {  $sstr = '*'; }
 }
 my (%ign_hash, @ign_relist);
 if (-f $ignpath) {
@@ -397,7 +419,8 @@ while (<P>) {
 undef %seen;
 close P;
 my $oldaddrcount = 0;
-if ($sstr ne '*') {
+if (defined fileno I) {
+    $sstr = '*'; # XXX, to be fixed...
   L: while (<I>) {
 	last if /^---/;
 	next if defined $hash{$_};
