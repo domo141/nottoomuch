@@ -9,7 +9,7 @@ exit $?
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Mon 07 Apr 2014 22:48:57 +0300 too
+# Last modified: Mon 07 Apr 2014 23:06:25 +0300 too
 
 # Add this to your notmuch elisp configuration file:
 #
@@ -24,6 +24,11 @@ exit $?
 # - 24 -^
 
 # HISTORY
+#
+# Version wip
+#
+#  --since option
+#  --exclude option
 #
 # Version 2.2  2014-03-29 15:12:14 UTC
 #   * In case there is both {phrase} and (comment) in an email address,
@@ -106,14 +111,20 @@ unless (@ARGV)
 }
 
 my ($o_update, $o_rebuild) = (0, 0);
-my $ohk;
-my %o_hash;
+my ($o_since, @o_exclude);
+my $aref;
 foreach (@ARGV) {
-    $o_hash{$ohk} = $_, undef $ohk, next if defined $ohk;
+    if (defined $aref) {
+	${$aref} = $_ if ref $aref eq 'SCALAR';
+	push @{$aref}, $_ if ref $aref eq 'ARRAY';
+	undef $aref; next;
+    }
     $o_update = 1, next if $_ eq '--update';
     $o_rebuild = 1, next if $_ eq '--rebuild';
-    $ohk = 'since', next if $_ eq '--since';
-    $o_hash{'since'} = $1, next if $_ =~ /^--since=(.*)/;
+    $aref = \$o_since, next if $_ eq '--since';
+    $o_since = $1, next if $_ =~ /^--since=(.*)/;
+    $aref = \@o_exclude, next if $_ eq '--exclude';
+    push (@o_exclude, $1), next if $_ eq '--exclude=(.*)';
 
     if ($_ eq '--help') {
 	$SIG{__DIE__} = sub {
@@ -135,16 +146,15 @@ foreach (@ARGV) {
     die "$0: '$ARGV[0]': unknown option.\n";
 }
 
-die "$0: Value missing for option '--$ohk'\n" if defined $ohk;
+die "$0: Value missing for option '$ARGV[$#ARGV]'\n" if defined $aref;
 
 die "For safety precaution, option '--update' must always be present.\n"
   unless $o_update;
 
 my $sincetime;
-if (defined $o_hash{since}) {
-    my $since = $o_hash{since};
-      die "Option '--since' value format: YYYY-MM-DD\n"
-	unless $since =~ /^(\d\d\d\d)-(\d\d)-(\d\d)$/;
+if (defined $o_since) {
+    die "Option '--since' value format: YYYY-MM-DD\n"
+      unless $o_since =~ /^(\d\d\d\d)-(\d\d)-(\d\d)$/;
     $sincetime = timelocal(0, 0, 0, $3, $2 - 1, $1);
     die "Since dates before Jan 1-2, 1970 not supported.\n" if $sincetime < 0;
 }
@@ -168,30 +178,41 @@ mkdirs $configdir unless -d $configdir;
 
 unlink $adbpath if $o_rebuild;
 
+my @exclude;
 my ($sstr, $acount) = (0, 0);
 if (-s $adbpath) {
     die "Cannot open '$adbpath': $!\n" unless open I, '<', $adbpath;
-    sysread I, $_, 18;
-    # new header: "v4/dd/dd/dd/dd/dd\n" where / == '\t' (but match also v2)
-    if (/^v[234]\s(\d\d)\s(\d\d)\s(\d\d)\s(\d\d)\s(\d\d)\n$/) {
-	$sstr = "$1$2$3$4$5" - 86400 * 7; # one week extra to (re)look.
+    read I, $_, 18;
+    # new header: "v5/dd/dd/dd/dd/dd\n" where / == '\t' (but match also v2)
+    if (/^v([2345])\s(\d\d)\s(\d\d)\s(\d\d)\s(\d\d)\s(\d\d)\n$/) {
+	$sstr = "$2$3$4$5$6" - 86400 * 7; # one week extra to (re)look.
 	$sstr = 0 if $sstr < 0;
+	if ($1 == 5) {
+	    while (<I>) {
+		last if /^---/;
+		push @exclude, $1 if /^exclude-path-re:\s+(.*)/;
+	    }
+	}
     }
     close I if $sstr == 0;
 }
 if ($sstr > 0) {
     print "Updating '$adbpath', since $sstr.\n";
     print "Option '--since' ignored due to update.\n" if $sincetime >= 0;
+    print "Option '--exclude' ignored due to update.\n" if @o_exclude;
     $sstr .= '..';
 }
 else {
     print "Creating '$adbpath'. This may take some time...\n";
+    push @exclude, split(/::/, $_) foreach (@o_exclude);
     if ($sincetime >= 0) {
-	print "Reading addresses from mails since $o_hash{since}.\n";
+	print "Reading addresses from mails since $o_since.\n";
 	$sstr = "$sincetime..",
     }
     else {  $sstr = '*'; }
 }
+undef @o_exclude;
+
 my (%ign_hash, @ign_relist);
 if (-f $ignpath) {
     die "Cannot open '$ignpath': $!\n" unless open J, '<', $ignpath;
@@ -217,7 +238,9 @@ my $sometime = time;
 die "Cannot open '$adbpath.new': $!\n" unless open O, '>', $adbpath.'.new';
 die "Cannot open '$actpath.new': $!\n" unless open A, '>', $actpath.'.new';
 $_ = $sometime; s/(..)\B/$1\t/g; # FYI: s/..\B\K/\t/g requires perl 5.10.
-print O "v4\t$_\n";
+print O "v5\t$_\n";
+print O "exclude-path-re: $_\n" foreach (@exclude);
+print O "---\n";
 
 # The following code block is from Email::Address, almost verbatim.
 # The reasons to snip code I instead of just 'use Email::Address' are:
@@ -293,12 +316,20 @@ my $mailbox    = qr/(?:$name_addr|$addr_spec)$comment*/;
 my %seen; # ...Email::Address is "replaced" by %seen & %hash.
 my %hash;
 
+my $database_path = qx/notmuch config get database.path/;
+chomp $database_path;
+my @exclude_re = map qr($database_path/$_), @exclude;
+undef $database_path;
+
+#foreach (@exclude_re) { print "$_\n"; }
+
 my $ptime = $sometime + 5;
 my $addrcount = 0;
 $| = 1;
 open P, '-|', qw/notmuch search --sort=newest-first --output=files/, $sstr;
-while (<P>) {
+X: while (<P>) {
     chomp;
+    foreach my $re (@exclude_re) { next X if /$re/; }
     open M, '<', $_ or next;
 
     while (<M>) {
