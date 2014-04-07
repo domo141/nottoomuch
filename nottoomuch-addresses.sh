@@ -9,7 +9,7 @@ exit $?
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Fri 04 Apr 2014 21:09:37 +0300 too
+# Last modified: Mon 07 Apr 2014 22:48:57 +0300 too
 
 # Add this to your notmuch elisp configuration file:
 #
@@ -145,7 +145,7 @@ if (defined $o_hash{since}) {
     my $since = $o_hash{since};
       die "Option '--since' value format: YYYY-MM-DD\n"
 	unless $since =~ /^(\d\d\d\d)-(\d\d)-(\d\d)$/;
-    $sincetime = timelocal(0, 0, 0, $3, $2, $1);
+    $sincetime = timelocal(0, 0, 0, $3, $2 - 1, $1);
     die "Since dates before Jan 1-2, 1970 not supported.\n" if $sincetime < 0;
 }
 else {
