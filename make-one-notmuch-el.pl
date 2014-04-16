@@ -10,11 +10,10 @@ Usage: $0 notmuch-dir
 
 Example (entered in root of notmuch source): $0 .
 
-This script builds one notmuch .elc file (containing all notmuch .el
-files concatenated together and then byte-compiled) which can be
-convenient for some purposes. This is provided in the hope that it
-will be useful, but this is not guaranteed to work always. As a
-developer tool you may have to fix it yourself.
+This script builds one notmuch .elc file which can be convenient
+for some purposes. This is provided in the hope that it will be
+useful, but this is not guaranteed to work always. As a developer
+tool you may have to fix it yourself.
 
 " unless @ARGV == 1;
 
@@ -42,8 +41,8 @@ die unless $? == 0;
 my $eldeps = 'emacs/.eldeps';
 open ELDEPS, '<', $eldeps or die "Opening $eldeps failed: $!\n";
 
-my $sources = [ ];
-my %deps;
+my $sources = [ 'emacs/notmuch.el' ];
+my %deps = ( 'emacs/notmuch.el' => [ 'emacs/notmuch-version.el' ] );
 
 # load dependencies.
 
