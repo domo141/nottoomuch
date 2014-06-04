@@ -5,7 +5,7 @@
 #	    All rights reserved
 #
 # Created: Thu Jul 28 2011 21:52:56 +0300 too
-# Last modified: Tue 21 Jan 2014 17:55:50 +0200 too
+# Last modified: Wed 04 Jun 2014 22:41:22 +0300 too
 
 set -eu
 
@@ -14,7 +14,7 @@ PATH=$HOME/bin:/usr/bin:/bin:/usr/local/bin:/usr/sbin:/sbin
 export PATH
 
 case ${BASH_VERSION-} in *.*) shopt -s xpg_echo; esac
-case ${ZSH_VERSION-} in *.*) setopt shwordsplit; esac
+case ${ZSH_VERSION-} in *.*) emulate ksh; esac
 
 saved_IFS=$IFS
 readonly saved_IFS
@@ -58,7 +58,7 @@ esac
 
 nospaces ()
 {
-	case $2 in *[$IFS]*) die "$1 '$2' contains whitespace"; esac
+	case $2 in *["$IFS"]*) die "$1 '$2' contains whitespace"; esac
 }
 
 maildir=$1 wipdir=$2 logdir=$3
