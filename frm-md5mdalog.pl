@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Created: Fri Aug 19 16:53:45 2011 +0300 too
-# Last Modified: Tue 01 Apr 2014 21:10:40 +0300 too
+# Last Modified: Tue 01 Jul 2014 12:53:50 +0300 too
 
 # This program examines the log files md5mda.sh has written to
 # $HOME/mail/log directory (XXX hardcoded internally to this script)
@@ -24,6 +24,8 @@ use warnings;
 use MIME::Base64 'decode_base64';
 use MIME::QuotedPrint 'decode_qp';
 use Encode qw/encode_utf8 find_encoding _utf8_on/;
+
+no warnings 'utf8'; # do not warn on malformed utf8 data in input...
 
 binmode STDOUT, ':utf8';
 
