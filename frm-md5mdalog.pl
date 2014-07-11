@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Created: Fri Aug 19 16:53:45 2011 +0300 too
-# Last Modified: Tue 01 Jul 2014 12:53:50 +0300 too
+# Last Modified: Fri 11 Jul 2014 10:31:12 +0300 too
 
 # This program examines the log files md5mda.sh has written to
 # $HOME/mail/log directory (XXX hardcoded internally to this script)
@@ -29,12 +29,12 @@ no warnings 'utf8'; # do not warn on malformed utf8 data in input...
 
 binmode STDOUT, ':utf8';
 
-sub usage () { die "Usage: $0 [-uvqf] [re...]\n"; }
+sub usage () { die "Usage: $0 [-uvdf] [re...]\n"; }
 
-my ($updateloc, $filenames, $filesonly, $nodelwarn) = (0, 0, 0, 0);
+my ($updateloc, $filenames, $filesonly, $showdels) = (0, 0, 0, 0);
 if (@ARGV > 0 and ord($ARGV[0]) == ord('-')) {
     my $arg = $ARGV[0];
-    $nodelwarn = 1 if $arg =~ s/-\w*\Kq//;
+    $showdels = 1 if $arg =~ s/-\w*\Kd//;
     $updateloc = 1 if $arg =~ s/-\w*\Ku//;
     $filenames = 1 if $arg =~ s/-\w*\Kv//;
     $filesonly = 1 if $arg =~ s/-\w*\Kf//;
@@ -187,7 +187,7 @@ foreach (@logfiles) {
 	if (m|(\w\w\w. \d\d:\d\d).*'(.*)'\s*$|) {
 	    $ltime = $1;
 	    open I, '<', "$2" or do {
-		print "    ** $2: deleted **\n" unless $nodelwarn; next;
+		print "    ** $2: deleted **\n" if $showdels; next;
 	    };
 	    my $f = $2;
 	    mailfrm $f;
@@ -225,7 +225,7 @@ if ($cmio != $omio or @logfiles > 1) {
 	print "Offset updated to $mdlf: $cmio\n" unless $filesonly;
 	close O;
     }
-    elsif (not $filesonly and not $nodelwarn and defined $frmloff
+    elsif (not $filesonly and $showdels and defined $frmloff
 	   and $mdlf eq $frmlast and $frmloff eq $cmio) {
 	my @l = lstat 'log/md5mda-frmlast';
 	@l = localtime $l[9];
