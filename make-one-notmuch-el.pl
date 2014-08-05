@@ -89,7 +89,7 @@ foreach (@files) {
     open I, '<', $_ or die $!;
     binmode I;
     while (<I>) {
-	if ( /\(declare-function.*"notmuch/ ) {
+	if ( /\((?:declare-function|autoload).*"notmuch/ ) {
 	    my $op = tr/(/(/ - tr/)/)/;
 	    while ($op > 0) {
 		$_ = <I>;
