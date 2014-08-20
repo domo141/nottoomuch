@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Created: Fri Aug 19 16:53:45 2011 +0300 too
-# Last Modified: Fri 11 Jul 2014 10:31:12 +0300 too
+# Last Modified: Wed 20 Aug 2014 23:22:43 +0300 too
 
 # This program examines the log files md5mda.sh has written to
 # $HOME/mail/log directory (XXX hardcoded internally to this script)
@@ -138,6 +138,7 @@ sub decode_data() {
 
 my ($mails, $smails, $odate) = (0, 0, '');
 
+my %lastfns;
 sub mailfrm($)
 {
     my ($sbj, $frm, $dte, $spam);
@@ -159,6 +160,10 @@ sub mailfrm($)
     else {
 	# could split to $1, $2 & $3...
 	$frm =~ s/=\?([^?]+\?.\?.+?)\?=/decode_data/ge;
+	unless ($filesonly) {
+	    $_ = $_[0]; s|.*/||;
+	    $frm="!$frm" if defined $lastfns{$_};
+	}
 	$sbj =~ s/=\?([^?]+\?.\?.+?)\?=/decode_data/ge;
 	_utf8_on($frm); _utf8_on($sbj); # for print widths...
 	my $line = sprintf '%-*.*s  %-.*s', $fw, $fw, $frm, $sw, $sbj;
@@ -172,6 +177,15 @@ sub mailfrm($)
     $mails += 1;
 }
 
+# read filenames of last mails imported, from new-* files, to know whether
+# taken by notmuch already (XXX 20140821 is this consistent XXX)
+
+my $_i; $_i = $_ while (<log/new-*>);
+open I, '<', $_i or die "$_i: $!\n";
+while (<I>) {
+    $lastfns{$1} = 1 if /\/([a-z0-9]{9,})$/;
+}
+undef $_i;
 
 my $omio = $mio;
 my ($cmio, $ltime);
