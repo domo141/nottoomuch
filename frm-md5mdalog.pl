@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Created: Fri Aug 19 16:53:45 2011 +0300 too
-# Last Modified: Sat 23 Aug 2014 19:07:30 +0300 too
+# Last Modified: Sun 24 Aug 2014 16:31:46 +0300 too
 
 # This program examines the log files md5mda.sh has written to
 # $HOME/mail/log directory (XXX hardcoded internally to this script)
@@ -31,9 +31,10 @@ binmode STDOUT, ':utf8';
 
 sub usage () { die "Usage: $0 [-uvdf] [re...]\n"; }
 
-my ($updateloc, $filenames, $filesonly, $showdels) = (0, 0, 0, 0);
+my ($updateloc, $filenames, $filesonly, $showdels, $fromnew) = (0, 0, 0, 0, 0);
 if (@ARGV > 0 and ord($ARGV[0]) == ord('-')) {
     my $arg = $ARGV[0];
+    $fromnew = $1 if $arg =~ s/^-\K(\d+)$//;
     $showdels = 1 if $arg =~ s/-\w*\Kd//;
     $updateloc = 1 if $arg =~ s/-\w*\Ku//;
     $filenames = 1 if $arg =~ s/-\w*\Kv//;
@@ -183,17 +184,31 @@ sub mailfrm($)
 my @_i = ( 1 );
 while (<log/new-*>) {
     $_i[$_i[0]++] = $_;
-    $_i[0] = 1 if $_i[0] >= 3;
+    $_i[0] = 1 if $_i[0] >= ($fromnew || 3);
 }
+
 shift @_i;
 foreach (@_i) {
-    open I, '<', $_ or die "$_: $!\n";
-    while (<I>) {
-	$lastfns{$1} = 1 if /\/([a-z0-9]{9,})$/;
+    open L, '<', $_ or die "$_: $!\n";
+    while (<L>) {
+	if ($fromnew) {
+	    # XXX so much duplicate w/ loop below
+	    /\s(\/\S+)\s+$/ || next;
+	    open I, '<', "$1" or do {
+		print "    ** $1: deleted **\n" if $showdels; next;
+	    };
+	    my $f = $1;
+	    mailfrm $1;
+	    close I;
+	}
+	else {
+	    $lastfns{$1} = 1 if /\/([a-z0-9]{9,})$/;
+	}
     }
-    close I;
+    close L;
 }
 undef @_i;
+exit if $fromnew;
 
 my $omio = $mio;
 my ($cmio, $ltime);
