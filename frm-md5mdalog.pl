@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Created: Fri Aug 19 16:53:45 2011 +0300 too
-# Last Modified: Sun 24 Aug 2014 16:31:46 +0300 too
+# Last Modified: Mon 01 Sep 2014 15:26:06 +0300 too
 
 # This program examines the log files md5mda.sh has written to
 # $HOME/mail/log directory (XXX hardcoded internally to this script)
@@ -184,7 +184,7 @@ sub mailfrm($)
 my @_i = ( 1 );
 while (<log/new-*>) {
     $_i[$_i[0]++] = $_;
-    $_i[0] = 1 if $_i[0] >= ($fromnew || 3);
+    $_i[0] = 1 if $_i[0] > ($fromnew || 3);
 }
 
 shift @_i;
