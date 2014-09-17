@@ -9,7 +9,7 @@ exit $?
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Wed 17 Sep 2014 18:59:44 +0300 too
+# Last modified: Wed 17 Sep 2014 22:28:09 +0300 too
 
 # Add these lines to your notmuch elisp configuration file
 # ;; (e.g to ~/.emacs.d/notmuch-config.el since notmuch 0.18):
@@ -25,6 +25,8 @@ exit $?
 # - 25 -^
 
 # HISTORY
+#
+# Version wip ...
 #
 # Version 2.3  2014-09-17 15:59:44 UTC
 #   * 3 new command line options for --(re)build phase:
@@ -110,6 +112,8 @@ use warnings;
 
 use utf8;
 use open ':utf8'; # do not use with autodie (?)
+binmode STDOUT, ':utf8';
+binmode STDERR, ':utf8';
 
 use Encode qw/decode_utf8 find_encoding _utf8_on/;
 use MIME::Base64 'decode_base64';
