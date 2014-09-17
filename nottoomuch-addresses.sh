@@ -9,9 +9,10 @@ exit $?
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Mon 07 Apr 2014 23:06:25 +0300 too
+# Last modified: Wed 17 Sep 2014 18:59:44 +0300 too
 
-# Add this to your notmuch elisp configuration file:
+# Add these lines to your notmuch elisp configuration file
+# ;; (e.g to ~/.emacs.d/notmuch-config.el since notmuch 0.18):
 #
 # (require 'notmuch-address)
 # (setq notmuch-address-command "/path/to/nottoomuch-addresses.sh")
@@ -20,24 +21,41 @@ exit $?
 # Documentation at the end. Encoding: utf-8.
 
 #!perl
-# line 24
-# - 24 -^
+# line 25
+# - 25 -^
 
 # HISTORY
 #
-# Version wip
+# Version 2.3  2014-09-17 15:59:44 UTC
+#   * 3 new command line options for --(re)build phase:
+#     --since                     -- scan mails dated since YYYY-MM-DD
+#     --exclude-path-re           -- regexps for directories to exclude
+#     --name-conversion=lcf2flem  -- convert address-matching phrase names
 #
-#  --since option
-#  --exclude option
+#     See updated documentation (--help) for more information of these.
+#
+#   * Changed 'addresses' file header to format v5: Following lines contain
+#     'since', 'exclude-path-re' and 'name-conversion' information (if any)
+#     and new marker line '---' separates this configuration from gathered
+#     addresses.
+#
+#   * The files this program writes (and then reads) are handled as containing
+#     utf8 data. The mail files read are read as "raw" files as incorrect utf8
+#     there could make this program abort. Malformed utf8 is (sometimes?)
+#     considered as being encoded as latin1 (at some time of the processing).
+#     This all is a bit hairy to me, but at least it is getting better...
+#
+#   * Slight option handling change: --update and --rebuild are now mutually
+#     exclusive and update does not (auto) build if address cache is missing.
 #
 # Version 2.2  2014-03-29 15:12:14 UTC
 #   * In case there is both {phrase} and (comment) in an email address,
 #     append comment to the phrase. This will make more duplicates to be
 #     removed. Now there can be:
-#	<user@host>
-#	"phrase" <user@host>
-#	"phrase (comment)" <user@host>
-#	<user@host> (comment)
+#       <user@host>
+#       "phrase" <user@host>
+#       "phrase (comment)" <user@host>
+#       <user@host> (comment)
 #   * In case email address is in form "someuser@somehost" <someuser@somehost>
 #     i.e. the phrase is exactly the same as <address>, phrase is dropped.
 #
@@ -90,13 +108,14 @@ use 5.8.1;
 use strict;
 use warnings;
 
-use Encode qw/encode_utf8 find_encoding/;
+use utf8;
+use open ':utf8'; # do not use with autodie (?)
+
+use Encode qw/decode_utf8 find_encoding _utf8_on/;
 use MIME::Base64 'decode_base64';
 use MIME::QuotedPrint 'decode_qp';
 
 use Time::Local;
-
-no encoding;
 
 my $configdir = ($ENV{XDG_CONFIG_HOME}||$ENV{HOME}.'/.config').'/nottoomuch';
 my $adbpath = $configdir . '/addresses';
@@ -110,21 +129,25 @@ unless (@ARGV)
     exit 1;
 }
 
-my ($o_update, $o_rebuild) = (0, 0);
+my ($o_update, $o_rebuild, $o_ncm) = (0, 0, {});
 my ($o_since, @o_exclude);
 my $aref;
 foreach (@ARGV) {
     if (defined $aref) {
-	${$aref} = $_ if ref $aref eq 'SCALAR';
-	push @{$aref}, $_ if ref $aref eq 'ARRAY';
-	undef $aref; next;
+	if (ref $aref eq 'ARRAY') {
+	    push @{$aref}, $_;
+	} else { ${$aref} = $_; }
+	undef $aref;
+	next;
     }
     $o_update = 1, next if $_ eq '--update';
     $o_rebuild = 1, next if $_ eq '--rebuild';
+    $aref = \$o_ncm, next if $_ eq '--name-conversion';
+    $o_ncm = $1, next if $_ =~ '^--name-conversion=(.*)';
     $aref = \$o_since, next if $_ eq '--since';
     $o_since = $1, next if $_ =~ /^--since=(.*)/;
-    $aref = \@o_exclude, next if $_ eq '--exclude';
-    push (@o_exclude, $1), next if $_ eq '--exclude=(.*)';
+    $aref = \@o_exclude, next if $_ eq '--exclude-path-re';
+    push (@o_exclude, $1), next if $_ =~ '^--exclude-path-re=(.*)';
 
     if ($_ eq '--help') {
 	$SIG{__DIE__} = sub {
@@ -143,13 +166,12 @@ foreach (@ARGV) {
 	exit ( Pod::Perldoc->run() );
     }
     #s/-+//;
-    die "$0: '$ARGV[0]': unknown option.\n";
+    die "$0: '$_': unknown option.\n";
 }
 
 die "$0: Value missing for option '$ARGV[$#ARGV]'\n" if defined $aref;
 
-die "For safety precaution, option '--update' must always be present.\n"
-  unless $o_update;
+my @optlines;
 
 my $sincetime;
 if (defined $o_since) {
@@ -157,9 +179,31 @@ if (defined $o_since) {
       unless $o_since =~ /^(\d\d\d\d)-(\d\d)-(\d\d)$/;
     $sincetime = timelocal(0, 0, 0, $3, $2 - 1, $1);
     die "Since dates before Jan 1-2, 1970 not supported.\n" if $sincetime < 0;
+    push @optlines, "since: $o_since\n"; # not used, just for future reference
 }
 else {
     $sincetime = -1;
+}
+
+unless (ref $o_ncm) {
+    die "The only name conversion method known is 'lcf2flem' (≠ '$o_ncm')\n"
+      unless $o_ncm eq 'lcf2flem';
+    push @optlines, "name-conversion: $o_ncm\n";
+}
+
+if ($o_rebuild) {
+    die "Options '--update' and '--rebuild' are mutually exclusive.\n"
+      if $o_update;
+}
+else {
+    die "File '$adbpath' does not exist. Need --rebuild option\n"
+      unless -s $adbpath;
+    die "Option '--since' not applicable when not rebuilding.\n"
+      if $sincetime >= 0;
+    die "Option '--exclude-path-re' not applicable when not rebuilding.\n"
+      if @o_exclude;
+    die "Option '--name-conversion' not applicable when not rebuilding.\n"
+      unless ref $o_ncm;
 }
 
 # all arg checks done before this line!
@@ -176,7 +220,7 @@ sub mkdirs($) {
 
 mkdirs $configdir unless -d $configdir;
 
-unlink $adbpath if $o_rebuild;
+unlink $adbpath if $o_rebuild; # XXX replace later w/ atomic replacement.
 
 my @exclude;
 my ($sstr, $acount) = (0, 0);
@@ -190,7 +234,9 @@ if (-s $adbpath) {
 	if ($1 == 5) {
 	    while (<I>) {
 		last if /^---/;
-		push @exclude, $1 if /^exclude-path-re:\s+(.*)/;
+		push @optlines, $_;
+		push(@exclude, $1), next if /^exclude-path-re:\s+(.*)/;
+		$o_ncm = $1 if /^name-conversion:\s*(.*?)\s+$/
 	    }
 	}
     }
@@ -198,13 +244,13 @@ if (-s $adbpath) {
 }
 if ($sstr > 0) {
     print "Updating '$adbpath', since $sstr.\n";
-    print "Option '--since' ignored due to update.\n" if $sincetime >= 0;
-    print "Option '--exclude' ignored due to update.\n" if @o_exclude;
     $sstr .= '..';
 }
 else {
     print "Creating '$adbpath'. This may take some time...\n";
     push @exclude, split(/::/, $_) foreach (@o_exclude);
+    push @optlines, "exclude-path-re: $_\n" foreach (@exclude);
+
     if ($sincetime >= 0) {
 	print "Reading addresses from mails since $o_since.\n";
 	$sstr = "$sincetime..",
@@ -212,6 +258,17 @@ else {
     else {  $sstr = '*'; }
 }
 undef @o_exclude;
+
+if (ref $o_ncm) {
+    $o_ncm = 0;
+}
+elsif ($o_ncm eq 'lcf2flem') {
+    $o_ncm = 1;
+}
+else {
+    warn "Unknown name conversion method '$o_ncm'. Ignored\n";
+    $o_ncm = 0;
+}
 
 my (%ign_hash, @ign_relist);
 if (-f $ignpath) {
@@ -239,8 +296,9 @@ die "Cannot open '$adbpath.new': $!\n" unless open O, '>', $adbpath.'.new';
 die "Cannot open '$actpath.new': $!\n" unless open A, '>', $actpath.'.new';
 $_ = $sometime; s/(..)\B/$1\t/g; # FYI: s/..\B\K/\t/g requires perl 5.10.
 print O "v5\t$_\n";
-print O "exclude-path-re: $_\n" foreach (@exclude);
+print O $_ foreach (@optlines);
 print O "---\n";
+undef @optlines;
 
 # The following code block is from Email::Address, almost verbatim.
 # The reasons to snip code I instead of just 'use Email::Address' are:
@@ -330,8 +388,9 @@ open P, '-|', qw/notmuch search --sort=newest-first --output=files/, $sstr;
 X: while (<P>) {
     chomp;
     foreach my $re (@exclude_re) { next X if /$re/; }
-    open M, '<', $_ or next;
-
+    # open in raw mode to avoid fatal utf8 problems. does some conversion
+    # heuristics like latin1 -> utf8 there... -- _utf8_on used on need basis.
+    open M, '<:raw', $_ or next;
     while (<M>) {
 	last if /^\s*$/;
 	next unless s/^(From|To|Cc|Bcc):\s+//i;
@@ -359,7 +418,7 @@ X: while (<P>) {
 	# to fit ok in this particular purpose. New bugs are mine!
 	# --8<----8<----8<----8<----8<----8<----8<----8<----8<----8<----8<--
 
-	s/[ \t]+/ /g;
+	s/[ \t]+/ /g; # this line did fail fatally on malformed utf-8 data...
 	s/\?= =\?/\?==\?/g;
 	my (@mailboxes) = (/$mailbox/go);
       L: foreach (@mailboxes) {
@@ -387,11 +446,11 @@ X: while (<P>) {
 		}
 		$s =~ tr/_/ /;
 
-		return $s if lc $1 eq 'utf-8';
+		return decode_utf8($s) if lc $1 eq 'utf-8';
 
 		my $o = find_encoding($1);
 		$_[0] = 0, return "=?$1?$2?$3?=" unless ref $o;
-		return encode_utf8($o->decode($s));
+		return $o->decode($s);
 	    }
 	    sub decode_data () {
 		my $loopmax = 5;
@@ -428,7 +487,30 @@ X: while (<P>) {
 
 	    # In case we would have {phrase} <user@host> (comment),
 	    # make that "{phrase} (comment)" <user@host> ...
-	    if (defined $phrase[0]) {
+	    if (defined $phrase[0])
+	    {
+		if ($o_ncm and $phrase[0] =~ /^(.*)\s*,\s*(.*)$/) {
+		    # Try to change "Last, First" to "First Last"
+		    # The heuristics: If either 'Last' or 'First' is having
+		    # the same length in name and address and case-insensitive
+		    # comparison where characters not matching a-z ignored.
+		    my ($mlast, $mfirst) = ($1, $2);
+		    if ($userhost =~ /^<?([^.]+)[.]([^@]+)@/) {
+			my ($afirst, $alast) = ($1, $2);
+			#print "$mlast - $mfirst / $afirst, $alast\n";
+			if    (_utf8_on($mlast),
+			       length $mlast == length $alast) {
+			    my $re = $mlast; $re =~ tr/A-Za-z/./c;
+			    $phrase[0] = "$mfirst $mlast" if $alast =~ /$re/i;
+			}
+			elsif (_utf8_on($mfirst),
+			       length $mfirst == length $afirst) {
+			    my $re = $mfirst; $re =~ tr/A-Za-z/./c;
+			    $phrase[0] = "$mfirst $mlast" if $afirst =~ /$re/i;
+			}
+		    }
+		}
+
 		if (@comments) {
 		    $phrase[0] = qq/"$phrase[0] / . join(' ', @comments) . '"';
 		    @comments = ();
@@ -504,40 +586,78 @@ nottoomuch-addresses.sh -- address completion/matching (for notmuch)
 
 =head1 SYNOPSIS
 
-nottoomuch-addresses.sh ( --update [--rebuild] | <search string> )
+nottoomuch-addresses.sh (--update | --rebuild [opts] | <search string>)
 
 B<nottoomuch-addresses.sh --help>  for more help
 
 =head1 VERSION
 
-2.2 (2014-03-29)
+2.3 (2014-09-17)
+
+=head1 <SEARCH STRING>
+
+In case no option argument is given on command line, the command line
+arguments are used as fixed search string. Search goes through all
+email addresses in cache and outputs every address (separated by
+newline) where a substring match with the given search string is
+found. No wildcard of regular expression matching is used.
+
+Search is not done unless there is at least 3 octets in search string.
 
 =head1 OPTIONS
 
 =head2 B<--update>
 
-This option is used to initially create the "address database" for
-searches to be done, and then incrementally update it with new
-addresses that are available in mails received since last update.
+This option is used to incrementally update the "address cache" with
+new addresses that are available in mails received since last update.
 
-In case you want to rebuild the database from scratch, add
-B<--rebuild> after --update on command line. This is necessary if some
-of the new emails received have Date: header point too much in the
-past (one week before last update). Update used emails Date:
+=head2 B<--rebuild>
+
+With this option the address cache is created (or rebuilt from scratch).
+
+In addition to initial creation this option is useful when some build options
+(which affect to all addresses) are desired to be changed.
+
+Sometimes some of the new emails received may have Date: header point too
+much in the past (one week before last update). Update uses email Date:
 information to go through new emails to be checked for new addresses
-with one week's overlap. Other reason for rebuild could be
-enhancements in new versions of this program which change the email
-format in database.
+with one week's overlap, and only rebuild will catch these emails (albeit
+the rebuild option is quite heavy option to solve such a problem).
 
-=head2 <SEARCH STRING>
+=head3 B<--rebuild> options:
 
-In case no option argument is given on command line, the command line
-arguments are used as fixed search string. Search goes through all
-email addresses in database and outputs every address (separated by
-newline) where a substring match with the given search string is
-found. No wildcard of regular expression matching is used.
+When (re)building the address cache, there are a few options to affect
+the operation (and future additions).
 
-Search is not done unless there is at least 3 octets in search string.
+=over 2
+
+=item B<--since>=YYYY-MM-DD
+
+Start email gathering from mails dated YYYY-MM-DD. I.e. skip older.
+
+=item B<--exclude-path-re>=path-regexp
+
+Regular expression(s) of directory paths to exclude when scanning mail files.
+This option can be given multiple times on the command line.
+
+Given regexps are anchored to the start of the string (based on the email
+directory notmuch is configured with), but not to the end (for example to
+match anywhere prefix regexp with '.*', or conversely, to anchor end suffix
+regexp with '$').
+
+=item B<--name-conversion>=lcf2lfem
+
+With name conversion method 'lcf2lfem' (the only method known) email addresses
+in format "Last, First <first.last@example.org>" are converted to
+"First Last <first.last@example.org>". For this conversion to succeed either
+"First" or "Last" needs to match the corresponding string in email address.
+If there are non-us-ascii characters in the names those are ignored in
+comparisons (i.e. matches any character).
+
+This method name is modeled from
+"Last-comma-First-to-First-Last-either-matches".
+
+=back
 
 =head1 IGNORE FILE
 
@@ -545,11 +665,11 @@ Some of the addresses collected may be valid but those still seems to
 be noisy junk. One may additionally want to just hide some email
 addresses.
 
-When running B<--update> the output shows the path of address database
+When running B<--update> the output shows the path of address cache
 file (usually C<$HOME/.config/nottoomuch/addresses>). If there is file
 C<addresses.ignore> in the same directory that file is read as
 newline-separated list of addresses which are not to be included in
-address database file.
+address cache file.
 
 Use your text editor to open both of these files. Then move address
 lines to be ignored from B<addresses> to B<addresses.ignore>. After
