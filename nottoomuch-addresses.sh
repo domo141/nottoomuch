@@ -9,7 +9,7 @@ exit $?
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Wed 17 Sep 2014 22:28:09 +0300 too
+# Last modified: Wed 17 Sep 2014 22:54:13 +0300 too
 
 # Add these lines to your notmuch elisp configuration file
 # ;; (e.g to ~/.emacs.d/notmuch-config.el since notmuch 0.18):
@@ -115,6 +115,8 @@ use open ':utf8'; # do not use with autodie (?)
 binmode STDOUT, ':utf8';
 binmode STDERR, ':utf8';
 
+use File::Temp 'tempfile';
+
 use Encode qw/decode_utf8 find_encoding _utf8_on/;
 use MIME::Base64 'decode_base64';
 use MIME::QuotedPrint 'decode_qp';
@@ -200,7 +202,7 @@ if ($o_rebuild) {
       if $o_update;
 }
 else {
-    die "File '$adbpath' does not exist. Need --rebuild option\n"
+    die "File '$adbpath' does not exist. Use --rebuild.\n"
       unless -s $adbpath;
     die "Option '--since' not applicable when not rebuilding.\n"
       if $sincetime >= 0;
@@ -388,10 +390,17 @@ undef $database_path;
 my $ptime = $sometime + 5;
 my $addrcount = 0;
 $| = 1;
+my $efn = tempfile(DIR => $configdir);
 open P, '-|', qw/notmuch search --sort=newest-first --output=files/, $sstr;
-X: while (<P>) {
-    chomp;
+while (<P>) {
     foreach my $re (@exclude_re) { next X if /$re/; }
+    print $efn $_;
+}
+close P;
+seek $efn, 0, 0;
+
+X: while (<$efn>) {
+    chomp;
     # open in raw mode to avoid fatal utf8 problems. does some conversion
     # heuristics like latin1 -> utf8 there... -- _utf8_on used on need basis.
     open M, '<:raw', $_ or next;
@@ -542,7 +551,7 @@ X: while (<P>) {
     close M;
 }
 undef %seen;
-close P;
+close $efn;
 my $oldaddrcount = 0;
 if (defined fileno I) {
     $sstr = '*'; # XXX, to be fixed...
