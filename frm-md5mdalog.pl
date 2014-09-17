@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Created: Fri Aug 19 16:53:45 2011 +0300 too
-# Last Modified: Mon 01 Sep 2014 15:26:06 +0300 too
+# Last Modified: Wed 17 Sep 2014 12:51:13 +0300 too
 
 # This program examines the log files md5mda.sh has written to
 # $HOME/mail/log directory (XXX hardcoded internally to this script)
@@ -123,13 +123,13 @@ sub get_next_hdr()
 sub decode_data() {
     local $_ = $1;
     if (s/^utf-8\?(q|b)\?//i) {
-	return (lc $1 eq 'q')? decode_qp($_): decode_base64($_);
+	return (lc $1 eq 'q')? decode_qp(tr/_/ /r): decode_base64($_);
     }
     if (s/^([\w-]+)\?(q|b)\?//i) {
 	my $t = lc $2;
 	my $o = find_encoding($1);
 	if (ref $o) {
-	    my $s = ($t eq 'q')? decode_qp($_): decode_base64($_);
+	    my $s = ($t eq 'q')? decode_qp(tr/_/ /r): decode_base64($_);
 	    # Encode(3p) is fuzzy whether encode_utf8 is needed...
 	    return encode_utf8($o->decode($s));
 	}
@@ -160,12 +160,14 @@ sub mailfrm($)
     if ($spam) { $smails++; }
     else {
 	# could split to $1, $2 & $3...
-	$frm =~ s/=\?([^?]+\?.\?.+?)\?=\s*/decode_data/ge;
+	$frm =~ s/\?=\s+=\?/\?==\?/g;
+	$frm =~ s/=\?([^?]+\?.\?.+?)\?=/decode_data/ge;
 	unless ($filesonly) {
 	    $_ = $_[0]; s|.*/||;
 	    $frm="!$frm" if defined $lastfns{$_};
 	}
-	$sbj =~ s/=\?([^?]+\?.\?.+?)\?=\s*/decode_data/ge;
+	$sbj =~ s/\?=\s+=\?/\?==\?/g;
+	$sbj =~ s/=\?([^?]+\?.\?.+?)\?=/decode_data/ge;
 	_utf8_on($frm); _utf8_on($sbj); # for print widths...
 	my $line = sprintf '%-*.*s  %-.*s', $fw, $fw, $frm, $sw, $sbj;
 	sub rechk ($) { foreach (@relist) { return 0 if ($_[0] =~ $_); } 1; }
