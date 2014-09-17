@@ -16,16 +16,17 @@ How To Install
 1. Copy `nottoomuch-addresses.sh <nottoomuch-addresses.sh>`_  to the machine
    you're running notmuch and find suitable location for it.
 
-2. Run ``/path/to/nottoomuch-addresses.sh --update``
+2. Run ``/path/to/nottoomuch-addresses.sh --rebuild``
    When run first time this gathers email addresses from all of your mail.
    This may take a long while to complete -- depends on the amount of email
-   you have. Further --updates are much faster as those just take addresses
-   from new mail.
+   you have. Further ``--update``\s are much faster as those just take
+   addresses from new mail.
 
 3. Test that it works: run ``/path/to/nottoomuch-addresses.sh notmuchmail``
 
 4. In case you're using emacs mua with notmuch, edit your notmuch
-   configuration for emacs with the following content:
+   configuration for emacs (e.g. ``~/.emacs.d/notmuch-config.el`` since
+   notmuch 0.18) with the following content:
    ::
 
       (require 'notmuch-address)
