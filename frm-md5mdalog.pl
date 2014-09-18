@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Created: Fri Aug 19 16:53:45 2011 +0300 too
-# Last Modified: Wed 17 Sep 2014 12:51:13 +0300 too
+# Last Modified: Thu 18 Sep 2014 15:03:38 +0300 too
 
 # This program examines the log files md5mda.sh has written to
 # $HOME/mail/log directory (XXX hardcoded internally to this script)
@@ -17,7 +17,7 @@
 # elegance is not a strong point in this program; hacked on the need basis...
 # maybe when the desired set of features is known this will be polished.
 
-use 5.10.0;
+use 5.014; # for tr///r
 use strict;
 use warnings;
 
