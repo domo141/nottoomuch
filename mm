@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Fri 11 Jul 2014 10:36:31 +0300 too
+# Last Modified: Tue 09 Dec 2014 14:53:23 +0200 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -157,6 +157,16 @@ cmd_startfemmda5 () # startfetchmail.sh using md5mda.sh mda
 	set -x
 	exec $d0/startfetchmail.sh $@ \
 		"$d0/md5mda.sh --cd mail received wip log"
+}
+
+cmd_delete () # remove emails with tag deleted
+{
+	case ${1-} in '!')
+		notmuch search --output=files tag:deleted | xargs rm
+		exit
+	esac
+	notmuch address tag:deleted
+	echo "enter '!' to the command line to do actual deletion"
 }
 
 
