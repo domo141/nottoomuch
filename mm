@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Tue 09 Dec 2014 15:01:43 +0200 too
+# Last Modified: Sun 08 Feb 2015 19:51:40 +0200 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -18,7 +18,7 @@ case ~ in '~') exec >&2; echo
 esac
 
 case ${BASH_VERSION-} in *.*) shopt -s xpg_echo; esac
-case ${ZSH_VERSION-} in *.*) setopt shwordsplit no_nomatch; esac
+case ${ZSH_VERSION-} in *.*) emulate ksh; set -eu; esac
 
 warn () { echo "$@"; } >&2
 die () { echo "$@"; exit 1; } >&2
@@ -31,15 +31,13 @@ x_eval () { echo + "$*" >&2; eval "$*"; }
 yesno ()
 {
 	echo
-	case ${KSH_VERSION-} in
-	 '')	echo	"$* (yes/NO)? \\c" ;;
-	 *)	echo -e	"$* (yes/NO)? \\c" ;;
-	esac
+	printf '%s (yes/NO)? ' "$*"
 	read ans
 	echo
 	case $ans in ([yY][eE][sS]) return 0; esac
 	return 1
 }  </dev/tty
+
 
 cmd_source () # Display source of given $0 command (or function).
 {
@@ -126,6 +124,7 @@ cmd_new () # Import new mail.
 	;;	/var/*mail/*) test ! -s $MAIL || mbox2md5mda
 	;;	*) warn "Suspicious '$MAIL' path. Ignored."
 	esac
+	case ${1-} in -) exit; esac
 	set -x
 	time notmuch new --verbose | tee -a $HOME/mail/wip/new-$ymdhms.log
 	read line < $HOME/mail/wip/new-$ymdhms.log
