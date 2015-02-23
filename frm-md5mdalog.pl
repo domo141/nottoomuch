@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Created: Fri Aug 19 16:53:45 2011 +0300 too
-# Last Modified: Thu 18 Sep 2014 15:03:38 +0300 too
+# Last Modified: Mon 23 Feb 2015 23:33:40 +0200 too
 
 # This program examines the log files md5mda.sh has written to
 # $HOME/mail/log directory (XXX hardcoded internally to this script)
@@ -17,7 +17,8 @@
 # elegance is not a strong point in this program; hacked on the need basis...
 # maybe when the desired set of features is known this will be polished.
 
-use 5.014; # for tr///r
+#use 5.014; # for tr///r
+use 5.8.1;
 use strict;
 use warnings;
 
@@ -123,13 +124,13 @@ sub get_next_hdr()
 sub decode_data() {
     local $_ = $1;
     if (s/^utf-8\?(q|b)\?//i) {
-	return (lc $1 eq 'q')? decode_qp(tr/_/ /r): decode_base64($_);
+	return (lc $1 eq 'q')? (tr/_/ /, decode_qp($_)): decode_base64($_);
     }
     if (s/^([\w-]+)\?(q|b)\?//i) {
 	my $t = lc $2;
 	my $o = find_encoding($1);
 	if (ref $o) {
-	    my $s = ($t eq 'q')? decode_qp(tr/_/ /r): decode_base64($_);
+	    my $s = ($t eq 'q')? (tr/_/ /, decode_qp($_)): decode_base64($_);
 	    # Encode(3p) is fuzzy whether encode_utf8 is needed...
 	    return encode_utf8($o->decode($s));
 	}
