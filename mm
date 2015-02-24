@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Sun 08 Feb 2015 19:51:40 +0200 too
+# Last Modified: Tue 24 Feb 2015 09:53:56 +0200 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -169,7 +169,7 @@ cmd_delete () # remove emails with tag deleted
 		x notmuch search tag:deleted
 	  ;; 0)
 		x notmuch address tag:deleted
-		echo "enter '!' to the command line to do actual deletion"
+		echo "Append '!' to the the end of the command line to do actual deletion."
 	  ;; *)
 		usage '[!|h]'
 	esac
