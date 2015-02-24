@@ -5,13 +5,16 @@
 #	    All rights reserved
 #
 # Created: Thu Jul 28 2011 21:52:56 +0300 too
-# Last modified: Wed 04 Jun 2014 22:41:22 +0300 too
+# Last modified: Tue 24 Feb 2015 22:17:02 +0200 too
 
 set -eu
 
 # When launched from ~/.forward, PATH not available...
 PATH=$HOME/bin:/usr/bin:/bin:/usr/local/bin:/usr/sbin:/sbin
 export PATH
+
+# "Idiomatic" ~/.forward example: (fix args and change user to your login name)
+#|"IFS=' '&& $HOME/.../md5mda.sh --cd $HOME/mail received wip log || exit 75 #user"
 
 case ${BASH_VERSION-} in *.*) shopt -s xpg_echo; esac
 case ${ZSH_VERSION-} in *.*) emulate ksh; esac
@@ -88,7 +91,9 @@ esac
 
 # Write mail content from stdin to a file.
 # 'bogofilter -p' could be used here (bogofilter keeps whole mail in memory).
-cat >> $if
+#cat >> $if
+# Replace possible 'From ' on 1st line with 'X-From-Line: '
+sed '1s/^From /X-From-Line: /' >> $if
 
 # openssl md5 provides same output on Linux & BSD systems (at least).
 eval `openssl md5 $if | sed 's:.* \(..\):dirp=\1 filep=:'`
