@@ -5,7 +5,7 @@
 #	    All rights reserved
 #
 # Created: Thu Jul 28 2011 21:52:56 +0300 too
-# Last modified: Tue 24 Feb 2015 22:17:02 +0200 too
+# Last modified: Wed 25 Feb 2015 16:35:48 +0200 too
 
 set -eu
 
@@ -17,7 +17,7 @@ export PATH
 #|"IFS=' '&& $HOME/.../md5mda.sh --cd $HOME/mail received wip log || exit 75 #user"
 
 case ${BASH_VERSION-} in *.*) shopt -s xpg_echo; esac
-case ${ZSH_VERSION-} in *.*) emulate ksh; esac
+case ${ZSH_VERSION-} in *.*) emulate ksh; set -eu; esac
 
 saved_IFS=$IFS
 readonly saved_IFS
