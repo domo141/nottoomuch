@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Created: Fri Aug 19 16:53:45 2011 +0300 too
-# Last Modified: Mon 23 Feb 2015 23:33:40 +0200 too
+# Last Modified: Sat 18 Apr 2015 13:26:43 +0300 too
 
 # This program examines the log files md5mda.sh has written to
 # $HOME/mail/log directory (XXX hardcoded internally to this script)
@@ -18,7 +18,7 @@
 # maybe when the desired set of features is known this will be polished.
 
 #use 5.014; # for tr///r
-use 5.8.1;
+use 5.10.1; # for \K
 use strict;
 use warnings;
 
@@ -30,9 +30,10 @@ no warnings 'utf8'; # do not warn on malformed utf8 data in input...
 
 binmode STDOUT, ':utf8';
 
-sub usage () { die "Usage: $0 [-uvdf] [re...]\n"; }
+sub usage () { die "Usage: $0 [-uvdfq] [re...]\n"; }
 
 my ($updateloc, $filenames, $filesonly, $showdels, $fromnew) = (0, 0, 0, 0, 0);
+my $quieter = 0;
 if (@ARGV > 0 and ord($ARGV[0]) == ord('-')) {
     my $arg = $ARGV[0];
     $fromnew = $1 if $arg =~ s/^-\K(\d+)$//;
@@ -40,6 +41,7 @@ if (@ARGV > 0 and ord($ARGV[0]) == ord('-')) {
     $updateloc = 1 if $arg =~ s/-\w*\Ku//;
     $filenames = 1 if $arg =~ s/-\w*\Kv//;
     $filesonly = 1 if $arg =~ s/-\w*\Kf//;
+    $quieter = 1 if $arg =~ s/-\w*\Kq//;
     usage unless $arg eq '-';
     shift @ARGV;
 }
@@ -154,7 +156,8 @@ sub mailfrm($)
     }
 
     $dte =~ s/ (\d\d\d\d).*/ $1/; $dte =~ s/\s(0|\s)/ /g;
-    $odate = $dte, print "*** $dte\n" if $dte ne $odate and not $filesonly;
+    $odate = $dte, print "*** $dte\n"
+	if $dte ne $odate and not $filesonly and not $quieter;
 
     $sbj = "<missing in $_[0] >" unless defined $sbj;
     #$frm = "<missing in $_[0] >" unless defined $frm;
@@ -217,7 +220,7 @@ my $omio = $mio;
 my ($cmio, $ltime);
 foreach (@logfiles) {
     $mdlf = $_;
-    print "Opening $mdlf... (offset $mio)\n" unless $filesonly;
+    print "Opening $mdlf... (offset $mio)" unless $filesonly or $quieter;
     open L, '<', $_ or die "Cannot open '$mdlf': $!\n";
     seek L, $mio, 0 if $mio > 0;
 
@@ -239,7 +242,7 @@ foreach (@logfiles) {
     $mio = 0;
 }
 
-if (defined $ltime and ! $filesonly) {
+if (defined $ltime and ! $filesonly and ! $quieter) {
     $ltime =~ tr/)//d;
     print "*** Last mail received: $ltime.\n";
 }

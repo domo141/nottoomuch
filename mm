@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Sat 28 Feb 2015 16:23:10 +0200 too
+# Last Modified: Sat 18 Apr 2015 13:34:33 +0300 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -73,7 +73,7 @@ set_d0 ()
 
 try_canon_d0 () {
 	case $d0 in */../*|*/./*)
-		_xd0=`readlink -f $d0 2>/dev/null || :`
+		_xd0=`exec readlink -f $d0 2>/dev/null` || :
 		case $_xd0 in /*) d0=$_xd0; esac
 	esac
 }
@@ -140,10 +140,12 @@ cmd_frm () # Run frm-md5mdalog.pl.
 	case ${1-x} in '') ;; *) exec $d0/frm-md5mdalog.pl "$@" ;; esac
 	case $# in 1) usage "''" match-re ;; esac
 	shift
-	echo; echo
-	$d0/frm-md5mdalog.pl "$@"
+	echo
+	tf=`exec mktemp`; trap "rm -f $tf" 0 INT TERM HUP QUIT
+	$d0/frm-md5mdalog.pl -qv "$@" | tee $tf |\
+		grep -v -e '^   ' -e '^$' || exit 0
 	yesno "Delete the messages listed above"
-	$d0/frm-md5mdalog.pl -f "$@" | xargs rm -fv
+	rm -fv `exec grep '/.*/.*/' $tf`
 }
 
 cmd_startfemmda5 () # startfetchmail.sh using md5mda.sh mda
