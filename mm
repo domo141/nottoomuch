@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Sat 18 Apr 2015 13:34:33 +0300 too
+# Last Modified: Mon 24 Aug 2015 20:15:28 +0300 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -142,7 +142,7 @@ cmd_frm () # Run frm-md5mdalog.pl.
 	shift
 	echo
 	tf=`exec mktemp`; trap "rm -f $tf" 0 INT TERM HUP QUIT
-	$d0/frm-md5mdalog.pl -qv "$@" | tee $tf |\
+	$d0/frm-md5mdalog.pl -qvw "$@" | tee $tf |\
 		grep -v -e '^   ' -e '^$' || exit 0
 	yesno "Delete the messages listed above"
 	rm -fv `exec grep '/.*/.*/' $tf`

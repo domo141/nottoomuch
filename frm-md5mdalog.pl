@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Created: Fri Aug 19 16:53:45 2011 +0300 too
-# Last Modified: Sat 18 Apr 2015 13:26:43 +0300 too
+# Last Modified: Mon 24 Aug 2015 20:13:35 +0300 too
 
 # This program examines the log files md5mda.sh has written to
 # $HOME/mail/log directory (XXX hardcoded internally to this script)
@@ -30,9 +30,10 @@ no warnings 'utf8'; # do not warn on malformed utf8 data in input...
 
 binmode STDOUT, ':utf8';
 
-sub usage () { die "Usage: $0 [-uvdfq] [re...]\n"; }
+sub usage () { die "Usage: $0 [-uvdfqw] [re...]\n"; }
 
-my ($updateloc, $filenames, $filesonly, $showdels, $fromnew) = (0, 0, 0, 0, 0);
+my ($updateloc, $filenames, $filesonly, $showdels, $fromnew, $wideout) =
+    (0, 0, 0, 0, 0, 0);
 my $quieter = 0;
 if (@ARGV > 0 and ord($ARGV[0]) == ord('-')) {
     my $arg = $ARGV[0];
@@ -42,6 +43,7 @@ if (@ARGV > 0 and ord($ARGV[0]) == ord('-')) {
     $filenames = 1 if $arg =~ s/-\w*\Kv//;
     $filesonly = 1 if $arg =~ s/-\w*\Kf//;
     $quieter = 1 if $arg =~ s/-\w*\Kq//;
+    $wideout = 1 if $arg =~ s/-\w*\Kw//;
     usage unless $arg eq '-';
     shift @ARGV;
 }
@@ -173,7 +175,8 @@ sub mailfrm($)
 	$sbj =~ s/\?=\s+=\?/\?==\?/g;
 	$sbj =~ s/=\?([^?]+\?.\?.+?)\?=/decode_data/ge;
 	_utf8_on($frm); _utf8_on($sbj); # for print widths...
-	my $line = sprintf '%-*.*s  %-.*s', $fw, $fw, $frm, $sw, $sbj;
+	my $line = $wideout ? $frm . '  ' . $sbj
+	    : sprintf '%-*.*s  %-.*s', $fw, $fw, $frm, $sw, $sbj;
 	sub rechk ($) { foreach (@relist) { return 0 if ($_[0] =~ $_); } 1; }
 	unless (@relist and rechk $line) {
 	    print $line, "\n" unless $filesonly;
@@ -220,7 +223,7 @@ my $omio = $mio;
 my ($cmio, $ltime);
 foreach (@logfiles) {
     $mdlf = $_;
-    print "Opening $mdlf... (offset $mio)" unless $filesonly or $quieter;
+    print "Opening $mdlf... (offset $mio)\n" unless $filesonly or $quieter;
     open L, '<', $_ or die "Cannot open '$mdlf': $!\n";
     seek L, $mio, 0 if $mio > 0;
 
