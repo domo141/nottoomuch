@@ -8,11 +8,29 @@
 #	    All rights reserved
 #
 # Created: Sun 29 Jun 2014 16:20:24 EEST too
-# Last modified: Mon 30 Jun 2014 00:33:38 +0300 too
+# Last modified: Wed 14 Oct 2015 22:53:39 +0300 too
 
 use 5.8.1;
 use strict;
 use warnings;
+use Cwd;
+
+#
+# set these to your liking
+#
+
+# use "default" From: unless $from set to non-empty string
+my $from = '';
+
+my $use_emacsclient = 0;
+
+# next 2 applicable when $use_emacsclient = 1
+my $create_frame = 0;
+# auto_daemon implies create_frame
+my $auto_daemon = 0;
+
+# note: in case of *not* using emacsclient, emacs itself is killed
+my $save_buffer_kill_terminal_after_send = 0;
 
 die "Usage: $0 mailto-url\n" unless @ARGV;
 
@@ -21,8 +39,8 @@ sub mail($$)
     my $rest;
     ($_, $rest) = split /\?/, $_[1], 2;
     s/^mailto://; #s/\s+//g;
-    my %hash = ( to => [], subject => [], cc => [], bcc => [], keywords => [],
-		 from => [], body => [] );
+    my %hash = ( to => [], subject => [], cc => [], bcc => [],
+		 keywords => [], body => [] );
     push @{$hash{to}}, $_ if $_;
     if (defined $rest) {
 	foreach (split /&/, $rest) {
@@ -44,11 +62,24 @@ sub mail($$)
     }
     my $to = liornil 'to';
     my $subject = liornil 'subject';
-    my $from = liornil 'from';
+    #my $from = liornil 'from';
+    if ($from) {
+	$from =~ s/("|\\)/\\$1/g;
+	$from = "'((From . \"$from\"))";
+    }
+    else { $from = 'nil'; }
 
     my @elisp = ( "(progn (require 'notmuch)",
 		  " (notmuch-mua-mail $to $subject $from nil",
 		  "	(notmuch-mua-get-switch-function))" );
+    if ($use_emacsclient) {
+	my $cwd = cwd(); $cwd =~ s/("|\\)/\\$1/g;
+	push @elisp, qq' (cd "$cwd")';
+    }
+    if ($save_buffer_kill_terminal_after_send) {
+	push @elisp,
+	  " (setq message-exit-actions '(save-buffers-kill-terminal))";
+    }
     sub ideffi($) {
 	no warnings; # ditto, now with @elisp too...
 	return unless @{$hash{$_[0]}};
@@ -67,19 +98,24 @@ sub mail($$)
 
     #print "@elisp\n"; exit 0;
 
-    unless (fork) {
-	open STDOUT , '>', '/dev/null';
-	open STDERR , '>&', \*STDOUT;
-	exec qw/emacsclient --eval t/;
+    my @cmdline;
+    if ($use_emacsclient) {
+	if ($auto_daemon) {
+	    @cmdline = qw/emacsclient -c --alternate-editor=/;
+	}
+	elsif ($create_frame) {
+	    @cmdline = qw/emacsclient -c/;
+	}
+	else {
+	    @cmdline = qw/emacsclient/;
+	}
     }
-    wait;
-    my $editor = $? ? $ENV{EMACS}||'emacs' : $ENV{EMACSCLIENT}||'emacsclient';
-    my @cmdline = ( $editor, '--eval', "@elisp" );
+    else {  @cmdline = qw/emacs/; }
 
-    # my @cmdline = ( $ENV{EMACSCLIENT} || 'emacsclient',
-    # '-a', $ENV{EMACS} || 'emacs', '--eval', "@elisp" );
+    push @cmdline, '--eval', "@elisp";
 
-    eval @cmdline unless $_[0];
+    #print "@cmdline\n"; exit 0;
+    exec @cmdline unless $_[0];
     system @cmdline;
 }
 

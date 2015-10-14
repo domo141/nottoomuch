@@ -2,7 +2,7 @@
 # -*- mode: shell-script; sh-basic-offset: 8; tab-width: 8 -*-
 
 # Created: Fri 11 Jul 2014 00:12:59 EEST too
-# Last Modified: Sat 03 Oct 2015 15:53:51 +0300 too
+# Last Modified: Wed 14 Oct 2015 22:55:05 +0300 too
 
 set -eu
 
@@ -128,7 +128,7 @@ if [ "$to" = '' -o "$to" = . ] && [ "$subject" = '' ] && [ "$elisp" = '' ]
 then
 	exec_mua "($elisp_start (notmuch-hello) (cd \"$_pwd\"))"
 else
-	[ "$from" != '' ] && oh="(list (cons 'From \"$from\"))" || oh='  nil'
+	[ "$from" != '' ] && oh="'((From . \"$from\"))" || oh='  nil'
 
 	if [ "$subject" == '' ]
 	then	subject=nil
@@ -143,7 +143,7 @@ else
 		to=\"$to\"
 	fi
 	exec_mua "(${elisp_start}
-;;(setq message-exit-actions (list #'save-buffers-kill-terminal))
+;;(setq message-exit-actions '(save-buffers-kill-terminal))
   (notmuch-mua-mail ${to} ${subject}
      ${oh} nil (notmuch-mua-get-switch-function))
   (cd \"$_pwd\")\
