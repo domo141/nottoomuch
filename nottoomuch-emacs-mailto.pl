@@ -4,41 +4,40 @@
 #
 # Author: Tomi Ollila -- too ät iki piste fi
 #
-#	Copyright (c) 2014 Tomi Ollila
+#	Copyright (c) 2014,2015 Tomi Ollila
 #	    All rights reserved
 #
 # Created: Sun 29 Jun 2014 16:20:24 EEST too
-# Last modified: Wed 14 Oct 2015 22:53:39 +0300 too
+# Last modified: Sun 01 Nov 2015 21:40:51 +0200 too
 
 use 5.8.1;
 use strict;
 use warnings;
 use Cwd;
 
-#
-# set these to your liking
-#
-
 # use "default" From: unless $from set to non-empty string
+# command line also overrides
 my $from = '';
 
-my $use_emacsclient = 0;
-
-# next 2 applicable when $use_emacsclient = 1
-my $create_frame = 0;
-# auto_daemon implies create_frame
-my $auto_daemon = 0;
-
 # note: in case of *not* using emacsclient, emacs itself is killed
-my $save_buffer_kill_terminal_after_send = 0;
+#my $save_buffer_kill_terminal_after_send = 0;
 
-die "Usage: $0 mailto-url\n" unless @ARGV;
+foreach (@ARGV) {
+    delete $ENV{DISPLAY}, shift, next if $_ eq '-nw';
+    $from=$1, shift, next if /^--from=(.*)/;
+    last;
+}
+
+die "Usage: $0 [options] mailto-url\n" unless @ARGV;
+
+my $use_emacsclient = defined $ENV{'DISPLAY'} && $ENV{DISPLAY} ne '';
 
 sub mail($$)
 {
     my $rest;
     ($_, $rest) = split /\?/, $_[1], 2;
-    s/^mailto://; #s/\s+//g;
+    warn("skipping '$_' (does not start with 'mailto:')\n"), return
+	 unless s/^mailto://;  #s/\s+//g;
     my %hash = ( to => [], subject => [], cc => [], bcc => [],
 		 keywords => [], body => [] );
     push @{$hash{to}}, $_ if $_;
@@ -69,17 +68,17 @@ sub mail($$)
     }
     else { $from = 'nil'; }
 
-    my @elisp = ( "(progn (require 'notmuch)",
+    my @elisp = ( "(with-demoted-errors (require 'notmuch)",
 		  " (notmuch-mua-mail $to $subject $from nil",
 		  "	(notmuch-mua-get-switch-function))" );
     if ($use_emacsclient) {
 	my $cwd = cwd(); $cwd =~ s/("|\\)/\\$1/g;
 	push @elisp, qq' (cd "$cwd")';
     }
-    if ($save_buffer_kill_terminal_after_send) {
-	push @elisp,
-	  " (setq message-exit-actions '(save-buffers-kill-terminal))";
-    }
+#   if ($save_buffer_kill_terminal_after_send) {
+#	push @elisp,
+#	  " (setq message-exit-actions '(save-buffers-kill-terminal))";
+#   }
     sub ideffi($) {
 	no warnings; # ditto, now with @elisp too...
 	return unless @{$hash{$_[0]}};
@@ -99,18 +98,16 @@ sub mail($$)
     #print "@elisp\n"; exit 0;
 
     my @cmdline;
+
     if ($use_emacsclient) {
-	if ($auto_daemon) {
-	    @cmdline = qw/emacsclient -c --alternate-editor=/;
-	}
-	elsif ($create_frame) {
-	    @cmdline = qw/emacsclient -c/;
-	}
-	else {
-	    @cmdline = qw/emacsclient/;
-	}
+	my $emacsclient = $ENV{EMACSCLIENT} || 'emacsclient';
+	@cmdline = ( $emacsclient,
+		     qw/-c --alternate-editor= --no-wait -s mailto-server/ )
     }
-    else {  @cmdline = qw/emacs/; }
+    else {
+	my $emacs = $ENV{EMACS} || 'emacs';
+	 @cmdline = ( $emacs, '-nw' );
+    }
 
     push @cmdline, '--eval', "@elisp";
 
