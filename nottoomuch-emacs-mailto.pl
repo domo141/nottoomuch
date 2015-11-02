@@ -8,7 +8,7 @@
 #	    All rights reserved
 #
 # Created: Sun 29 Jun 2014 16:20:24 EEST too
-# Last modified: Sun 01 Nov 2015 21:40:51 +0200 too
+# Last modified: Mon 02 Nov 2015 18:08:04 +0200 too
 
 use 5.8.1;
 use strict;
@@ -18,6 +18,9 @@ use Cwd;
 # use "default" From: unless $from set to non-empty string
 # command line also overrides
 my $from = '';
+
+# fyi: default emacs server socket name is 'server'...
+my $socket_name = 'mailto-server';
 
 # note: in case of *not* using emacsclient, emacs itself is killed
 #my $save_buffer_kill_terminal_after_send = 0;
@@ -102,7 +105,7 @@ sub mail($$)
     if ($use_emacsclient) {
 	my $emacsclient = $ENV{EMACSCLIENT} || 'emacsclient';
 	@cmdline = ( $emacsclient,
-		     qw/-c --alternate-editor= --no-wait -s mailto-server/ )
+		     qw/-c --alternate-editor= --no-wait -s/, $socket_name )
     }
     else {
 	my $emacs = $ENV{EMACS} || 'emacs';
