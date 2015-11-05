@@ -3,7 +3,7 @@
 #
 # inotify grab: around Sat 17 Sep 2011 17:10:49 EEST too
 # Created: Mon 05 Jan 2015 17:20:37 +0200 too
-# Last modified: Mon 05 Jan 2015 20:21:49 +0200 too
+# Last modified: Thu 05 Nov 2015 17:29:47 +0200 too
 
 # This program takes "lognameglob" as an argument and when this sees
 # CLOSE_WRITE event on files (on current directory) that matches the
@@ -89,11 +89,16 @@ while (my ($key, $value) = each %inotify) {
 
 {
     my $bn0 = $0; $bn0 =~ s|.*/||;
-    system "ps ax | grep -q '[ /]$bn0'";
+    system "ps ax | grep '[(]$bn0\[)]'";
     die "$bn0 may already be running!\n" unless $?;
+    $0 = '(' . $bn0 . ')';
 }
 
 die "\nUsage: $0 lognameglob.\n\n" unless @ARGV == 1;
+
+die "'/'s in '$ARGV[0]'\n" if $ARGV[0] =~ /\//;
+
+warn "Note: No '*'s nor '?'s in '$ARGV[0]'...\n" unless $ARGV[0] =~ /[*?]/;
 
 #while (<$ARGV[0]>) { print $_, "\n";}
 {
