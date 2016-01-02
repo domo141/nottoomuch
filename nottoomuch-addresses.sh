@@ -9,7 +9,7 @@ exit $?
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Wed 17 Sep 2014 18:59:44 +0300 too
+# Last modified: Sat 02 Jan 2016 23:00:00 +0200 too
 
 # Add these lines to your notmuch elisp configuration file
 # ;; (e.g to ~/.emacs.d/notmuch-config.el since notmuch 0.18):
@@ -25,6 +25,11 @@ exit $?
 # - 25 -^
 
 # HISTORY
+#
+# Version 2.4  2016-01-02 21:00:00 UTC
+#   * Separated mail file list reading using notmuch(1) to reading through
+#     the mail files so that notmuch database is locked for shorter time.
+#   * Some internal utf8 handling (related output warnings went away).
 #
 # Version 2.3  2014-09-17 15:59:44 UTC
 #   * 3 new command line options for --(re)build phase:
@@ -110,6 +115,10 @@ use warnings;
 
 use utf8;
 use open ':utf8'; # do not use with autodie (?)
+binmode STDOUT, ':utf8';
+binmode STDERR, ':utf8';
+
+use File::Temp 'tempfile';
 
 use Encode qw/decode_utf8 find_encoding _utf8_on/;
 use MIME::Base64 'decode_base64';
@@ -196,7 +205,7 @@ if ($o_rebuild) {
       if $o_update;
 }
 else {
-    die "File '$adbpath' does not exist. Need --rebuild option\n"
+    die "File '$adbpath' does not exist. Use --rebuild.\n"
       unless -s $adbpath;
     die "Option '--since' not applicable when not rebuilding.\n"
       if $sincetime >= 0;
@@ -376,18 +385,26 @@ my %hash;
 
 my $database_path = qx/notmuch config get database.path/;
 chomp $database_path;
-my @exclude_re = map qr($database_path/$_), @exclude;
+my @exclude_re = map qr(^$database_path/$_), @exclude;
+print((join "\n", map "Excluding '^$database_path/$_'", @exclude), "\n")
+  if @exclude and $o_rebuild;
 undef $database_path;
-
-#foreach (@exclude_re) { print "$_\n"; }
+undef @exclude;
 
 my $ptime = $sometime + 5;
 my $addrcount = 0;
 $| = 1;
+my $efn = tempfile(DIR => $configdir);
 open P, '-|', qw/notmuch search --sort=newest-first --output=files/, $sstr;
 X: while (<P>) {
-    chomp;
     foreach my $re (@exclude_re) { next X if /$re/; }
+    print $efn $_;
+}
+close P;
+seek $efn, 0, 0;
+
+while (<$efn>) {
+    chomp;
     # open in raw mode to avoid fatal utf8 problems. does some conversion
     # heuristics like latin1 -> utf8 there... -- _utf8_on used on need basis.
     open M, '<:raw', $_ or next;
@@ -538,7 +555,7 @@ X: while (<P>) {
     close M;
 }
 undef %seen;
-close P;
+close $efn;
 my $oldaddrcount = 0;
 if (defined fileno I) {
     $sstr = '*'; # XXX, to be fixed...
