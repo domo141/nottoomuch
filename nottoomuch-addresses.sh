@@ -9,7 +9,7 @@ exit $?
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Wed 17 Sep 2014 23:14:21 +0300 too
+# Last modified: Sat 02 Jan 2016 23:00:00 +0200 too
 
 # Add these lines to your notmuch elisp configuration file
 # ;; (e.g to ~/.emacs.d/notmuch-config.el since notmuch 0.18):
@@ -26,7 +26,10 @@ exit $?
 
 # HISTORY
 #
-# Version wip ...
+# Version 2.4  2016-01-02 21:00:00 UTC
+#   * Separated mail file list reading using notmuch(1) to reading through
+#     the mail files so that notmuch database is locked for shorter time.
+#   * Some internal utf8 handling (related output warnings went away).
 #
 # Version 2.3  2014-09-17 15:59:44 UTC
 #   * 3 new command line options for --(re)build phase:
