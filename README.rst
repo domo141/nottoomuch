@@ -16,6 +16,10 @@ address completion:
 nottoomuch-addresses_ |
 selection-menu_
 
+mail sending:
+
+nottoomuch-emacs-mailto_
+
 mail delivery:
 
 `startfetchmail <#mail-delivery>`__ |
@@ -44,6 +48,16 @@ selection-menu_
   when sending emails.
 
 .. _selection-menu: selection-menu.rst
+
+
+mail sending
+------------
+
+nottoomuch-emacs-mailto_
+  send mail from e.g. following mailto: link in web browsers,
+  using notmuch emacs client.
+
+.. _nottoomuch-emacs-mailto: nottoomuch-emacs-mailto.rst
 
 
 mail delivery
