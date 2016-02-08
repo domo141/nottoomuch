@@ -9,7 +9,7 @@ exit $?
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Sat 02 Jan 2016 23:00:00 +0200 too
+# Last modified: Mon 08 Feb 2016 15:28:55 +0200 too
 
 # Add these lines to your notmuch elisp configuration file
 # ;; (e.g to ~/.emacs.d/notmuch-config.el since notmuch 0.18):
@@ -662,9 +662,9 @@ directory notmuch is configured with), but not to the end (for example to
 match anywhere prefix regexp with '.*', or conversely, to anchor end suffix
 regexp with '$').
 
-=item B<--name-conversion>=lcf2lfem
+=item B<--name-conversion>=lcf2flem
 
-With name conversion method 'lcf2lfem' (the only method known) email addresses
+With name conversion method 'lcf2flem' (the only method known) email addresses
 in format "Last, First <first.last@example.org>" are converted to
 "First Last <first.last@example.org>". For this conversion to succeed either
 "First" or "Last" needs to match the corresponding string in email address.
