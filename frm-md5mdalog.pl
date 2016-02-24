@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Created: Fri Aug 19 16:53:45 2011 +0300 too
-# Last Modified: Fri 06 Nov 2015 17:07:34 +0200 too
+# Last Modified: Wed 24 Feb 2016 08:39:56 +0200 too
 
 # This program examines the log files md5mda.sh has written to
 # $HOME/mail/log directory (XXX hardcoded internally to this script)
@@ -154,7 +154,7 @@ sub mailfrm($)
 	$sbj = $1 if (/^Subject:\s*(.*?)\s*$/i);
 	$frm = $1 if (/^From:\s*(.*?)\s*$/i);
 	$dte = $1 if (/^Date:\s*(.*?)\s*$/i);
-	$spam = 1 if /^X-Bogosity:.*Spam/i;
+	$spam = 1 if /^X-Bogosity:.*\bSpam\b/i;
     }
 
     $dte =~ s/ (\d\d\d\d).*/ $1/; $dte =~ s/\s(0|\s)/ /g;
