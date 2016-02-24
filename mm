@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Mon 24 Aug 2015 20:15:28 +0300 too
+# Last Modified: Tue 10 Nov 2015 18:49:34 +0200 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -137,15 +137,17 @@ cmd_new () # Import new mail.
 cmd_frm () # Run frm-md5mdalog.pl.
 {
 	set_d0
-	case ${1-x} in '') ;; *) exec $d0/frm-md5mdalog.pl "$@" ;; esac
-	case $# in 1) usage "''" match-re ;; esac
+	case ${1-x} in mvto:*) ;; *) exec $d0/frm-md5mdalog.pl "$@" ;; esac
+	case $# in 1) usage "mvto:path" match-re ;; esac
+	ddir=${1#*:}
+	test -d "$ddir" || die "'$ddir': no such directory"
 	shift
 	echo
 	tf=`exec mktemp`; trap "rm -f $tf" 0 INT TERM HUP QUIT
 	$d0/frm-md5mdalog.pl -qvw "$@" | tee $tf |\
 		grep -v -e '^   ' -e '^$' || exit 0
-	yesno "Delete the messages listed above"
-	rm -fv `exec grep '/.*/.*/' $tf`
+	yesno "Move the messages listed above to '$ddir'"
+	mv -fv `exec grep '^   */.*/' $tf` "$ddir"
 }
 
 cmd_startfemmda5 () # startfetchmail.sh using md5mda.sh mda
