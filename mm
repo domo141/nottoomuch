@@ -1,9 +1,8 @@
 #!/bin/sh
-
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Tue 10 Nov 2015 18:49:34 +0200 too
+# Last Modified: Wed 13 Apr 2016 16:35:12 +0300 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -132,6 +131,22 @@ cmd_new () # Import new mail.
 	case $line in 'No new mail.'*) rm $HOME/mail/wip/new-$ymdhms.log
 	;; *) mv $HOME/mail/wip/new-$ymdhms.log $HOME/mail/log/new-$ymdhms.log
 	esac
+}
+
+cmd_help () # emulate notmuch help by fetching pages from notmuch wiki
+{
+	test $# = 1 || exec notmuch help
+	if command -v wget >/dev/null
+	then	fcl='wget -O-'
+	elif command -v curl >/dev/null
+	then	fcl='curl -L'
+	else
+		die no wget nor curl available
+	fi
+	set -x
+	$fcl http://notmuchmail.org/manpages/notmuch-$1-1/ | \
+		sed -e '1,/id="content"/d' -e 's|<.>||g' -e 's|</.>||g' \
+		-e 's/<a href=[^>]*>//g' -e '/id="footer"/q' | less -s
 }
 
 cmd_frm () # Run frm-md5mdalog.pl.
