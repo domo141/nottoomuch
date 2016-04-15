@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Created: Fri Aug 19 16:53:45 2011 +0300 too
-# Last Modified: Wed 24 Feb 2016 08:39:56 +0200 too
+# Last Modified: Fri 15 Apr 2016 18:44:06 +0300 too
 
 # This program examines the log files md5mda.sh has written to
 # $HOME/mail/log directory (XXX hardcoded internally to this script)
@@ -174,9 +174,12 @@ sub mailfrm($)
 	}
 	$sbj =~ s/\?=\s+=\?/\?==\?/g;
 	$sbj =~ s/=\?([^?]+\?.\?.+?)\?=/decode_data/ge;
-	_utf8_on($frm); _utf8_on($sbj); # for print widths...
-	my $line = $wideout ? $frm . '  ' . $sbj
-	    : sprintf '%-*.*s  %-.*s', $fw, $fw, $frm, $sw, $sbj;
+	my $line;
+	if ($wideout) { $line = $frm . '  ' . $sbj;
+	} else {
+	    _utf8_on($frm); _utf8_on($sbj); # for print widths...
+	    $line = sprintf '%-*.*s  %-.*s', $fw, $fw, $frm, $sw, $sbj;
+	}
 	sub rechk ($) { foreach (@relist) { return 0 if ($_[0] =~ $_); } 1; }
 	unless (@relist and rechk $line) {
 	    print $line, "\n" unless $filesonly;
