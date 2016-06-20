@@ -2,7 +2,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Wed 13 Apr 2016 16:35:12 +0300 too
+# Last Modified: Mon 20 Jun 2016 14:53:44 +0300 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -173,6 +173,7 @@ cmd_startfemmda5 () # startfetchmail.sh using md5mda.sh mda
 	set_d0
 	try_canon_d0
 	cd $HOME
+	test -d mail || mkdir mail
 	case $d0 in $PWD/*) d0=${d0#$PWD/}; esac
 	set -x
 	exec $d0/startfetchmail.sh $@ \
