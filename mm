@@ -2,7 +2,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Mon 20 Jun 2016 14:53:44 +0300 too
+# Last Modified: Tue 21 Jun 2016 14:05:50 +0300 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -201,9 +201,12 @@ cmd_delete () # remove emails with tag deleted
 
 case ${1-} in -x) nosetx=false; shift ;; *) nosetx=true ;; esac
 
+bn=${0##*/} # basename
+
+# if $0 is not 'mm' (is it linked to another name), use it as cmd
+case $bn in mm) ;; *) set "$bn" "$@" ;; esac
+
 case ${1-} in '')
-	#bn=`exec basename "$0"`
-	bn=${0##*/} # basename
 	echo
 	echo Usage: $0 '[-x] <command> [args]'
 	echo
