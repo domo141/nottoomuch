@@ -190,7 +190,7 @@ case ${1-} in '')
 	echo
 	echo $bn0 commands available:
 	echo
-	sed -n '/^cmd_[a-z0-9_]/ { s/cmd_/ /; s/ () [ -#]*/                   /
+	sed -n '/^cmd_[a-z0-9_]/ { s/cmd_/ /; s/ () [ #]*/                   /
 		s/$0/'"$bn0"'/; s/\(.\{13\}\) */\1/p; }' "$0"
 	echo
 	echo Command can be abbreviated to any unambiguous prefix.

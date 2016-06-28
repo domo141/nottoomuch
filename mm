@@ -212,7 +212,7 @@ case ${1-} in '')
 	echo
 	echo $bn commands available:
 	echo
-	sed -n '/^cmd_[a-z0-9_]/ { s/cmd_/ /; s/ () [ -#]*/                   /
+	sed -n '/^cmd_[a-z0-9_]/ { s/cmd_/ /; s/ () [ #]*/                   /
 			s/$0/'"$bn"'/g; s/\(.\{14\}\) */\1/p; }' $0
 	echo
 	echo Commands may be abbreviated until ambiguous.
