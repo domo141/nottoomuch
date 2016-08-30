@@ -3,7 +3,7 @@
 # $ startfetchmail.sh $
 #
 # Created: Wed 06 Mar 2013 17:17:58 EET too
-# Last modified: Thu 20 Feb 2014 22:52:06 +0200 too
+# Last modified: Tue 30 Aug 2016 22:13:40 +0300 too
 
 # Fetchmail does not offer an option to daemonize it after first authentication
 # is successful (and report if it failed). After 2 fragile attempts to capture
@@ -19,14 +19,14 @@ esac
 
 case $# in 5) ;; *) exec >&2
 	echo
-	echo Usage: $0 [-I] '(143|993) (keep|nokeep)' user server mda_cmdline
+	echo Usage: $0 [-I] '(143|993|995) (keep|nokeep)' user server mda_cmdline
 	echo
 	echo This script runs fetchmail with options to use encrypted IMAP
-	echo connection when fetching email. STARTTLS is required when using
-	echo port 143. IMAP IDLE feature used when applicable...
+	echo '(or POP3)' connection when fetching email. STARTTLS is required
+	echo when using port 143. IMAP IDLE feature used when applicable...
 	echo
-	echo ... except -I option can be used to inhibit IDLE usage, in cases
-	echo where mail delivery is delayed or does not happen with IDLE.
+	echo ... except -I option can be used to inhibit IMAP IDLE usage, in
+	echo cases where mail delivery is delayed or does not happen with IDLE.
 	echo
 	echo fetchmail is run in background '(daemon mode)' and first few
 	echo seconds of new fetchmail log is printed to terminal so that user
@@ -51,14 +51,18 @@ case $# in 5) ;; *) exec >&2
 	exit 1
 esac
 
-case $1 in 143) ssl='sslproto TLS1' ;; 993) ssl=ssl ;; *) exec >&2
-	echo
-	echo "$0: '$1' is not either '143' or '993'".
-	exit 1
-	echo
+proto=IMAP
+case $1 in 143) ssl='sslproto TLS1'
+	;; 993) ssl=ssl
+	;; 995) ssl=ssl idle= proto='POP3 uidl' # uidl there is a bit hacky...
+	;; *)	exec >&2
+		echo
+		echo "$0: '$1' is not '143', '993' nor '995'".
+		exit 1
+		echo
 esac
 
-case $2 in keep) keep=keep ;; nokeep) keep= ;; *) exec >&2
+case $2 in keep) keep='keep';; nokeep) keep= ;; *) exec >&2
 	echo
 	echo "$0: '$2' is not either 'keep' or 'nokeep'".
 	echo
@@ -109,14 +113,15 @@ logfilepid=$!
 
 trap 'rm -f fmconf; kill $logfilepid' 0
 
+umask 077
 echo "
 set daemon 120
 set logfile '$logfile'
 
-poll '$imap_server' proto IMAP user '$imap_user' $ssl $keep $idle
+poll '$imap_server' proto $proto
+  user '$imap_user' $ssl $keep $idle
   mda '$mda_cmdline'
-" > fmconf
-chmod 700 fmconf
+" | tee fmconf
 
 ( set -x; exec fetchmail -f fmconf -v )
 
