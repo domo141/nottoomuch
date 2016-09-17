@@ -24,7 +24,7 @@
  * $ nottoomuch-wrapper.c $
  *
  * Created: Tue 13 Mar 2012 12:34:26 EET too
- * Last modified: Sat 17 Sep 2016 13:14:27 +0300 too
+ * Last modified: Sat 17 Sep 2016 13:34:46 +0300 too
  */
 
 #include <unistd.h>
@@ -106,8 +106,11 @@ int main(int argc, char * argv[])
 
     gt = time(null);
 
+#if 0  /* log all commands from now on... */
     if (strcmp(argv[1], "tag") == 0 || strcmp(argv[1], "search") == 0 ||
-	strcmp(argv[1], "show") == 0 || strcmp(argv[1], "reply") == 0) {
+	strcmp(argv[1], "show") == 0 || strcmp(argv[1], "reply") == 0)
+#endif
+    {
 	char * home = getenv("HOME");
 	if (home) {
 	    sprintf(buf, "%s/nottoomuch-wrapper.log", home);
@@ -120,7 +123,7 @@ int main(int argc, char * argv[])
 	}
     }
 
-    /* XXX ugly hack, gained by trial & errror */
+    /* XXX ugly hack (to do date expansion at 2012-03), got by trial & errror */
     for (i = 2; i < argc && argv[i]; i++) {
 	const char * arg = argv[i];
 	char * q;
