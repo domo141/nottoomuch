@@ -24,7 +24,7 @@
  * $ nottoomuch-wrapper.c $
  *
  * Created: Tue 13 Mar 2012 12:34:26 EET too
- * Last modified: Sat 17 Sep 2016 13:34:46 +0300 too
+ * Last modified: Sat 17 Sep 2016 14:26:18 +0300 too
  */
 
 #include <unistd.h>
@@ -62,16 +62,18 @@ static const char * get_time(const char * str, long * timep)
 	return null;
 
     switch (*endptr) {
-    case 'h': mult = 60;	 endptr++; break;
-    case 'd': mult = 1440;	 endptr++; break;
-    case 'w': mult = 7 * 1440;	 endptr++; break;
-    case 'm': mult = 30 * 1440;  endptr++; break;
-    case 'y': mult = 365 * 1440; endptr++; break;
+    case 's': mult = 1;		endptr++; break;
+    case 'm': mult = 60;	endptr++; break;
+    case 'h': mult = 3600;	endptr++; break;
+    case 'd': mult = 86400;	endptr++; break;
+    case 'w': mult = 7 * 86400;	endptr++; break;
+    case 'M': mult = 30 * 86400; endptr++; break;
+    case 'y': mult = 365 * 86400; endptr++; break;
     case '.':
     case ' ':
     case '\0':
 	if (val < 1000) {
-	    mult = 1;
+	    mult = 60;
 	    break;
 	}
 	*timep = val;
@@ -80,7 +82,7 @@ static const char * get_time(const char * str, long * timep)
 	return null;
     }
 
-    t = (gt - (mult * val * 60));
+    t = (gt - (mult * val));
     if (t < 0)
 	t = 0;
     *timep = t;
