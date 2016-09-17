@@ -5,10 +5,14 @@
  #  Tip: enter /bin/echo as notmuch command when testing code changes...
  set -eu
  case ${1-} in '') echo "Usage: sh $0 [/path/to/]notmuch" >&2; exit 1; esac
- notmuch=$1; shift; trg=`basename "$0" .c`; rm -f "$trg"
- WARN="-Wall -Wno-long-long -Wstrict-prototypes -pedantic"
+ notmuch=$1; shift; trg=`exec basename "$0" .c`; rm -f "$trg"
+ WARN="-Wall -Wstrict-prototypes -Winit-self -Wformat=2" # -pedantic
  WARN="$WARN -Wcast-align -Wpointer-arith " # -Wfloat-equal #-Werror
- WARN="$WARN -W -Wwrite-strings -Wcast-qual -Wshadow" # -Wconversion
+ WARN="$WARN -Wextra -Wwrite-strings -Wcast-qual -Wshadow" # -Wconversion
+ WARN="$WARN -Wmissing-include-dirs -Wundef -Wbad-function-cast -Wlogical-op"
+ WARN="$WARN -Waggregate-return -Wold-style-definition"
+ WARN="$WARN -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls"
+ WARN="$WARN -Wnested-externs -Winline -Wvla -Woverlength-strings -Wpadded"
  case ${1-} in '') set x -O2; shift; esac
  #case ${1-} in '') set x -ggdb; shift; esac
  set -x
@@ -20,7 +24,7 @@
  * $ nottoomuch-wrapper.c $
  *
  * Created: Tue 13 Mar 2012 12:34:26 EET too
- * Last modified: Thu 17 May 2012 15:11:09 EEST too
+ * Last modified: Sat 17 Sep 2016 13:14:27 +0300 too
  */
 
 #include <unistd.h>
