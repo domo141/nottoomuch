@@ -18,7 +18,8 @@ selection-menu_
 
 mail sending:
 
-nottoomuch-emacs-mailto_
+nottoomuch-emacs-mailto_ |
+`nottoomuch-xdg-email <#mail-sending>`__
 
 mail delivery:
 
@@ -58,6 +59,13 @@ nottoomuch-emacs-mailto_
   using notmuch emacs client.
 
 .. _nottoomuch-emacs-mailto: nottoomuch-emacs-mailto.rst
+
+nottoomuch-xdg-email_
+  wrap ``xdg-email`` with this (by putting this as ``xdg-email`` in
+  ``$PATH`` before the system one) so that nottoomuch-emacs-mailto_
+  is used as the mailer.
+
+.. _nottoomuch-xdg-email: nottoomuch-xdg-email.sh
 
 
 mail delivery
