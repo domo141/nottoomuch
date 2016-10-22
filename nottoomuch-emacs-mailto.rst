@@ -27,7 +27,11 @@ How To "Install"
    In Firefox this was easy: *Edit->Preferences->Applications* and set
    ``mailto`` there. In Chrome I could not find how this is done;
    perhaps some mystic *xdg* things or something... I'll update this
-   whenever I figure out...
+   whenever I figure out... OK, the solution is to use
+   nottoomuch-xdg-email_ to wrap ``xdg-email``... see its embedded
+   documentation for more info.
+
+.. _nottoomuch-xdg-email: nottoomuch-xdg-email.sh
 
 (*) In graphical display, emacs is started in server mode and the frame
 is opened using ``emacsclient(1)``. The emacs server uses special server
