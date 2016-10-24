@@ -72,8 +72,15 @@ Alternative 3 provides way to use remote notmuch without editing
 nottoomuch-remote.bash -- also the same script can be used with multiple
 clients to separate (local +) remotes simultaneously!
 
+4) Use the new script, ``nottoomuch-remote-emacs.sh`` briefly mentioned
+   below. More information of it will be added later...
+
 Configure Emacs on the client computer
 --------------------------------------
+
+(there is now a new tool available:
+`nottoomuch-remote-emacs.sh <nottoomuch-remote-emacs.sh>`_
+use it or this other stuff below...)
 
 Add something like the following functions to your Emacs (general(*) or
 notmuch specific) configuration files:
@@ -154,7 +161,7 @@ just run
 from command line and observe output. If it looks as it should be next
 uncomment the line
 ::
-    #BASH_XTRACEFD=6; exec 6>>remote-errors; echo -- >&6; set -x
+    #exec 6>>remote-errors; BASH_XTRACEFD=6; echo -- >&6; set -x
 
 in ``./nottoomuch-remote.bash`` and attempt to use it from emacs again --
 and then examine the contents of remote-errors in the working directory
