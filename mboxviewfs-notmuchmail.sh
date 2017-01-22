@@ -8,7 +8,7 @@
 #	    All rights reserved
 #
 # Created: Thu 27 Oct 2016 20:46:23 EEST too
-# Last modified: Thu 27 Oct 2016 21:35:28 +0300 too
+# Last modified: Sun 22 Jan 2017 21:56:26 +0200 too
 
 case ~ in '~') echo "'~' does not expand. old /bin/sh?" >&2; exit 1; esac
 
@@ -69,7 +69,7 @@ dn0=${fn0%/*}
 
 x cd "$dn0"
 test -f mboxviewfs.c || die "No 'mboxviewfs.c' in '$dn0'"
-newer1=`exec ls -t mboxviewfs.c mboxviewfs 2>/dev/null || :`
+newer1=`exec ls -t mboxviewfs.c mboxviewfs 2>/dev/null` || :
 
 case $newer1 in mboxviewfs.c*) # mboxviewfs.c is never (or no mboxviewfs)
 	x sh mboxviewfs.c
