@@ -55,9 +55,9 @@ then
 		rm -rf /var/lib/apt/lists/
 	else
 		: Note: dnf commands below may be long-lasting and silent...
-		dnf -v -y install make gcc gcc-c++ git \
+		dnf -v -y install make gcc gcc-c++ redhat-rpm-config git \
 			xapian-core-devel gmime-devel libtalloc-devel \
-			zlib-devel python2-sphinx man dtach emacs-nox gdb\
+			zlib-devel python2-sphinx man dtach emacs-nox gdb \
 			gnupg2-smime
 		dnf -v -y autoremove
 		dnf -v -y clean all
