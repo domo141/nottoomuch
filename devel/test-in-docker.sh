@@ -15,7 +15,7 @@ saved_IFS=$IFS; readonly saved_IFS
 warn () { printf '%s\n' "$*"; } >&2
 die () { printf '%s\n' "$@"; exit 1; } >&2
 
-known_argvals="'7.11', '8.6', '14.04.5', '16.04', '24' or 'unstable'"
+known_argvals="'7.11', '8.6', '14.04.5', '16.04', '25', 'unstable' or 'centos70'"
 
 test $# != 0 || die '' "Usage: $0 {debian/ubuntu/fedora base version}" \
 		    '' "version options:" \
@@ -25,9 +25,12 @@ case $known_argvals
   in *"'$1'"*) ;; *) die "'$1' not any of these: $known_argvals".
 esac
 
+ver=$1
+
 # the scheme below works fine with current set of "supported" distributions...
 case $1 in [12]?.04*)	base=ubuntu debian=true
 	;; [23]*)	base=fedora debian=false
+	;; centos70)	base=centos debian=false; ver=7.0.1406
 	;; *)		base=debian debian=true
 esac
 
@@ -36,7 +39,7 @@ x_env () { printf '+ %s\n' "$*" >&2; env "$@"; }
 x_eval () { printf '+ %s\n' "$*" >&2; eval "$*"; }
 x_exec () { printf '+ %s\n' "$*" >&2; exec "$@"; die "exec '$*' failed"; }
 
-image=notmuch-te-$base-$1
+image=notmuch-te-$base-$ver
 if test "${2-}" = --in-container--
 then
 	set -x
@@ -54,14 +57,44 @@ then
 		apt-get -y clean
 		rm -rf /var/lib/apt/lists/
 	else
+		test $base = centos && {
+			dnf=yum
+			yum -v -y install epel-release findutils tar openssl
+		} || dnf=dnf
 		: Note: dnf commands below may be long-lasting and silent...
-		dnf -v -y install make gcc gcc-c++ redhat-rpm-config git \
+		$dnf -v -y install make gcc gcc-c++ redhat-rpm-config git \
 			xapian-core-devel gmime-devel libtalloc-devel \
 			zlib-devel python2-sphinx man dtach emacs-nox gdb \
 			gnupg2-smime
-		dnf -v -y autoremove
-		dnf -v -y clean all
+		#$dnf -v -y autoremove # removes findutils in centos 7.0
+		$dnf -v -y clean all
+
 	fi
+	command -v dtach >/dev/null || { # centos7 does not have as of 2017-02
+		tgz=dtach-0.9.tar.gz
+		dir=dtach-0.9
+		url=https://downloads.sourceforge.net/project/dtach/dtach/0.9/$tgz
+		if command -v wget >/dev/null
+		then wget --no-check-certificate $url
+		elif command -v curl >/dev/null
+		then curl --insecure -L -O $url
+		else echo Cannot download $url: no wget nor curl available
+		     exit 1
+		fi
+		sha256sum=`exec sha256sum $tgz`
+		case $sha256sum in 32e9fd6923c553c443fab4ec9c1f95d83fa47b771e*)
+				;; *)
+					echo $tgz checksum mismatch
+					exit 1
+		esac
+		tar zxvf $tgz
+		cd $dir
+		./configure
+		make
+		mv dtach /usr/local/bin
+		cd ..
+		rm -rf $dir $tgz
+	}
 	exit
 fi
 
@@ -71,7 +104,7 @@ test "${SUDO_USER-}" && { sudo=sudo user=$SUDO_USER; } || { sudo= user=$USER; }
 
 x docker inspect --type=image --format='{{.ID}}' $image || {
 	# create missing container image
-	from=$base:$1
+	from=$base:$ver
 	x docker inspect --type=image --format='{{.ID}}' $from ||
 		x docker pull $from
 	x docker create -w /root/.docker-setup \
