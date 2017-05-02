@@ -9,7 +9,7 @@ exit $?
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Sun 30 Apr 2017 16:44:07 +0300 too
+# Last modified: Tue 02 May 2017 23:00:48 +0300 too
 
 # Add these lines to your notmuch elisp configuration file
 # ;; (e.g to ~/.emacs.d/notmuch-config.el since notmuch 0.18):
@@ -390,7 +390,9 @@ if (-f $toppath) {
     while (<J>) {
 	next if defined $seen{$_};
 	$seen{$_} = 1;
+	$hash{$_} = 1;
 	$addrcount++;
+	print O $_;
 	print A $_;
     }
     close J;
