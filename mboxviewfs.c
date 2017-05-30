@@ -1,8 +1,12 @@
 #if 0 /* -*- mode: c; c-file-style: "stroustrup"; tab-width: 8; -*-
- set -eu; trg=`basename "$0" .c`; rm -f "$trg"
- WARN="-Wall -Wno-long-long -Wstrict-prototypes -pedantic"
+ set -eu; trg=`exec basename "$0" .c`; rm -f "$trg"
+ WARN="-Wall -Wstrict-prototypes -Winit-self -Wformat=2" # -pedantic
  WARN="$WARN -Wcast-align -Wpointer-arith " # -Wfloat-equal #-Werror
- WARN="$WARN -W -Wwrite-strings -Wcast-qual -Wshadow" # -Wconversion
+ WARN="$WARN -Wextra -Wwrite-strings -Wcast-qual -Wshadow" # -Wconversion
+ WARN="$WARN -Wmissing-include-dirs -Wundef -Wbad-function-cast -Wlogical-op"
+ WARN="$WARN -Waggregate-return -Wold-style-definition"
+ WARN="$WARN -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls"
+ WARN="$WARN -Wnested-externs -Winline -Wvla -Woverlength-strings -Wpadded"
 #FLAGS=`{ pkg-config --cflags --libs fuse || kill $$;} | sed 's/-I/-isystem '/g`
  FLAGS=`pkg-config --cflags --libs fuse | sed 's/-I/-isystem '/g`
 #FLAGS=`pkg-config --cflags --libs fuse`
@@ -15,7 +19,7 @@
  */
 #endif
 /*
- * $  mboxviewfs.c  1.0  2014-10-24  $
+ * $  mboxviewfs.c  1.1  2017-01-22  $
  *
  * Author: Tomi Ollila -- too ät iki piste fi
  *
@@ -23,7 +27,7 @@
  *          All rights reserved
  *
  * Created: Sun Oct 5 10:45:49 2014 +0300 too
- * Last modified: Fri 24 Oct 2014 17:17:12 +0300 too
+ * Last modified: Sun 22 Jan 2017 22:11:28 +0200 too
  */
 
 /* LICENSE: 2-clause BSD license ("Simplified BSD License"):
@@ -55,7 +59,8 @@
 // dir/file search routines got too hairy in the course of evolution... ;) //
 // i.e. that part to be restructured in case there is much more to be done //
 
-#define _XOPEN_SOURCE // for strptime
+//#define _XOPEN_SOURCE // for strptime
+#define _XOPEN_SOURCE 600 // ... for strptime and timerspec when -std=c99
 
 #include <unistd.h>
 #include <stdio.h>
@@ -160,19 +165,22 @@ const struct {
 struct {
     const char * prgname;
     int fd;
+    int32_t pad1_unused;
     off_t mboxsize;
     size_t mailc;
     FileEntry * maila;
     size_t * maili;
     unsigned yearmonc;
+    int32_t pad2_unused;
     DirEntry * yearmona;
     unsigned lastdirindex;
+    int32_t pad3_unused;
     time_t ht;
     uid_t uid;
     gid_t gid;
 } G;
 
-void init_G(const char * prgname)
+static void init_G(const char * prgname)
 {
     G.prgname = prgname;
 
@@ -218,14 +226,14 @@ static inline time_t xtimegm(struct tm * tm)
     return result;
 }
 
-time_t fetime(FileEntry * fe)
+static time_t fetime(FileEntry * fe)
 {
     struct tm tm = {
         .tm_year = fe->year, .tm_mon = fe->mon, .tm_mday = fe->mday,
         .tm_hour = fe->hour, .tm_min = fe->min, .tm_sec = fe->sec,
     };
     d0("%d %d", fe->xqho, fe->xqho * 900);
-#if MKTIME_ME_HARDER
+#if defined (MKTIME_ME_HARDER) && MKTIME_ME_HARDER
     (void)mktime(&tm);
     d0("%d, %d", tm.tm_year + 1900, tm.tm_yday);
     return (time_t)(tm.tm_year - 70) * 31536000
@@ -240,7 +248,7 @@ time_t fetime(FileEntry * fe)
 #endif
 }
 
-DirEntry * finddir(int16_t year, int8_t mon)
+static DirEntry * finddir(int16_t year, int8_t mon)
 {
     d1("(%d, %d)", year + 1900, mon + 1);
     BB;
@@ -527,7 +535,7 @@ void diev(const char * str, ...)
     *(const char **)&(iov[i].iov_base) = ".\n";
     iov[i].iov_len = 2;
     i++;
-#if (__GNUC__ >= 4 && ! __clang__)
+#if (__GNUC__ >= 4 && ! (defined (__clang__) && __clang__) )
     { ssize_t __i = writev(2, iov, i); (void)(__i = __i); }
 #else
     (void)writev(2, iov, i);
@@ -555,7 +563,7 @@ static inline void skipnonspace(const char ** p)
 }
 
 // last resort, best heuristics w/o error checking
-int last_resort_get_tm(const char * string, struct tm * tm)
+static int last_resort_get_tm(const char * string, struct tm * tm)
 {
 //    for (;; while (*string && !isspace(*string)) string++)) {
     for (;; skipnonspace(&string)) {
@@ -650,14 +658,15 @@ static int _gettm(const char * string, struct tm * tm)
 
 struct lineread
 {
-  int     fd;            /* input file descriptor */
   char *  currp;         /* current scan point in buffer */
   char *  endp;          /* pointer of last read character in buffer */
   char *  startp;        /* pointer to start of output */
   char *  sizep;         /* pointer to the end of read buffer */
+  int     fd;            /* input file descriptor */
   char    selected;      /* has caller done select()/poll() or does he care */
   char    line_completed;/* line completion in LineRead */
   uint8_t saved;         /* saved char in LineRead */
+  uint8_t pad_unused;
   char    data[32768];   /* the data buffer... */
 };
 typedef struct lineread LineRead;
@@ -754,7 +763,7 @@ static void lineread_init(LineRead * lr, int fd)
 
 /* ^^^^^^^^^^^^^^^^^^^^^^^^^ lineread.c ^^^^^^^^^^^^^^^^^^^^^^^^^ */
 
-void * xrealloc(void * ptr, size_t size)
+static void * xrealloc(void * ptr, size_t size)
 {
     ptr = realloc(ptr, size);
     if (ptr == null)
@@ -762,7 +771,7 @@ void * xrealloc(void * ptr, size_t size)
     return ptr;
 }
 
-void addmail(off_t pos, struct tm * tm)
+static void addmail(off_t pos, struct tm * tm)
 {
     # define MASIZE 1000
     if (G.mailc % MASIZE == 0) {
@@ -789,7 +798,7 @@ void addmail(off_t pos, struct tm * tm)
 // second to the directory times. Future implementation change must have same
 // or similar feature where every added mail to a directory will cause direc-
 // tory timestamt to change.
-int sortmaili(const void * aa, const void * bb)
+static int sortmaili(const void * aa, const void * bb)
 //int sortmaili(off_t * a, off_t * b)
 //int sortmail(const FileEntry * a, const FileEntry * b)
 {
@@ -806,7 +815,7 @@ int sortmaili(const void * aa, const void * bb)
     return (a < b)? -1: 1;
 }
 
-void scan_mbox(const char * mboxfile)
+static void scan_mbox(const char * mboxfile)
 {
     BB;
     int fd = open(mboxfile, O_RDONLY);
