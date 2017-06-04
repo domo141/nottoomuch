@@ -8,8 +8,8 @@
  WARN="$WARN -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls"
  WARN="$WARN -Wnested-externs -Winline -Wvla -Woverlength-strings -Wpadded"
 #FLAGS=`{ pkg-config --cflags --libs fuse || kill $$;} | sed 's/-I/-isystem '/g`
- FLAGS=`pkg-config --cflags --libs fuse | sed 's/-I/-isystem '/g`
-#FLAGS=`pkg-config --cflags --libs fuse`
+ FLAGS=`exec pkg-config --cflags --libs fuse`
+ FLAGS=`exec awk -vf="$FLAGS" 'BEGIN { gsub("-I", "-isystem ", f); print f }'`
  case ${1-} in '') set x -O2; shift; esac
  #case ${1-} in '') set x -ggdb; shift; esac
 #set -x; exec ${CC:-gcc} -std=c99 $WARN $FLAGS "$@" -o "$trg" "$0"
@@ -19,7 +19,7 @@
  */
 #endif
 /*
- * $  mboxviewfs.c  1.1  2017-01-22  $
+ * $  mboxviewfs.c  1.2  2017-06-04  $
  *
  * Author: Tomi Ollila -- too ät iki piste fi
  *
@@ -27,7 +27,7 @@
  *          All rights reserved
  *
  * Created: Sun Oct 5 10:45:49 2014 +0300 too
- * Last modified: Sun 04 Jun 2017 13:04:13 +0300 too
+ * Last modified: Sun 04 Jun 2017 13:33:05 +0300 too
  */
 
 /* LICENSE: 2-clause BSD license ("Simplified BSD License"):
@@ -106,7 +106,7 @@ enum { false = 0, true = 1 };
 #define da(format, ...) \
     fprintf(stderr, "%d:%s " format "\n", __LINE__, __func__, __VA_ARGS__)
 
-#define xassert_eq(a, b) do { if ((a) != (b)) { fprintf(stderr, #a "(%jd) != " #b "(%jd)\n", (intmax_t)(a), (intmax_t)(b)); exit(1); }} while (0)
+#define xassert_eq(a, b) do { if ((a) != (b)) { fprintf(stderr, #a "(%td) != " #b "(%td)\n", (intptr_t)(a), (intptr_t)(b)); exit(1); }} while (0)
 
 // set to 0 to and go through all warnings whether all vars are really unused //
 #if 1
@@ -128,6 +128,9 @@ typedef struct {
 
 typedef struct {
     size_t index; // index in yearmona "array"
+#if !defined (__SIZEOF_SIZE_T__) || __SIZEOF_SIZE_T__ != 8
+    uint32_t opportunistic_pad; // off_t expected to be 64bit in size
+#endif
     int16_t year;
     int8_t mon;
     int8_t mday;
@@ -181,8 +184,10 @@ static void init_G(const char * prgname)
     xassert_eq(&((FileEntry *)0)->xqho, &((DirEntry *)0)->xqho);
 
     d0("sizeof (time_t): %lu", sizeof (time_t));
+#if 0 // XXX
     xassert_eq(sizeof (time_t), 8);
     xassert_eq(sizeof (long), 8);
+#endif
 
     G.uid = getuid();
     G.gid = getgid();
@@ -411,9 +416,13 @@ static int mbox_readdir(const char * path, void * buf, fuse_fill_dir_t filler,
             if (fe->year != year || fe->mon != mon)
                 break;
             char fname[20];
+#if !defined (__SIZEOF_SIZE_T__) || __SIZEOF_SIZE_T__ != 8
+#warning 32 bit system may have problems w/ emails Dated after 2038-01-14...
+#else
             if (fn >= ((size_t)1 << 32))
                 snprintf(fname, sizeof fname, "%016lx", (uint64_t)fn);
             else
+#endif
                 snprintf(fname, sizeof fname, "%08x", (uint32_t)fn);
             filler(buf, fname, null, 0);
         }
@@ -495,7 +504,7 @@ static struct fuse_operations mbox_oper = {
 const uint8_t ESTR[] = { 128, 0 };
 
 #if defined(__GNUC__) && __GNUC__ >= 4
-#define ATTRIBUTE(a) __attribute__((a))
+#define ATTRIBUTE(a) __attribute__ ((a))
 #else
 #define ATTRIBUTE(a)
 #endif
