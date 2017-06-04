@@ -1,5 +1,5 @@
 #if 0 /* -*- mode: c; c-file-style: "stroustrup"; tab-width: 8; -*-
- set -eu; trg=`exec basename "$0" .c`; rm -f "$trg"
+ set -euf; trg=${0##*''/}; trg=${trg%.c}; test ! -e "$trg" || rm "$trg"
  WARN="-Wall -Wstrict-prototypes -Winit-self -Wformat=2" # -pedantic
  WARN="$WARN -Wcast-align -Wpointer-arith " # -Wfloat-equal #-Werror
  WARN="$WARN -Wextra -Wwrite-strings -Wcast-qual -Wshadow" # -Wconversion
@@ -27,7 +27,7 @@
  *          All rights reserved
  *
  * Created: Sun Oct 5 10:45:49 2014 +0300 too
- * Last modified: Sun 22 Jan 2017 22:11:28 +0200 too
+ * Last modified: Sun 04 Jun 2017 13:04:13 +0300 too
  */
 
 /* LICENSE: 2-clause BSD license ("Simplified BSD License"):
@@ -84,20 +84,6 @@
 
 #define null ((void*)0)
 enum { false = 0, true = 1 };
-
-#if (__GNUC__ >= 4)
-#define GCCATTR_SENTINEL __attribute ((sentinel))
-#else
-#define GCCATTR_SENTINEL
-#endif
-
-#if (__GNUC__ >= 3)
-#define GCCATTR_NORETURN __attribute ((noreturn))
-#define GCCATTR_UNUSED   __attribute ((unused))
-#else
-#define GCCATTR_NORETURN
-#define GCCATTR_UNUSED
-#endif
 
 // (variable) block begin/end -- explicit liveness...
 #define BB {
@@ -508,8 +494,14 @@ static struct fuse_operations mbox_oper = {
 
 const uint8_t ESTR[] = { 128, 0 };
 
-void diev(const char * str, ...) GCCATTR_SENTINEL GCCATTR_NORETURN;
-void diev(const char * str, ...)
+#if defined(__GNUC__) && __GNUC__ >= 4
+#define ATTRIBUTE(a) __attribute__((a))
+#else
+#define ATTRIBUTE(a)
+#endif
+
+static void ATTRIBUTE(sentinel)  ATTRIBUTE(noreturn)
+diev(const char * str, ...)
 {
     struct iovec iov[16];
     va_list ap;
