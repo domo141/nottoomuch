@@ -3,7 +3,7 @@
 # $ startfetchmail.sh $
 #
 # Created: Wed 06 Mar 2013 17:17:58 EET too
-# Last modified: Tue 30 Aug 2016 22:13:40 +0300 too
+# Last modified: Fri 08 Sep 2017 17:31:02 +0300 too
 
 # Fetchmail does not offer an option to daemonize it after first authentication
 # is successful (and report if it failed). After 2 fragile attempts to capture
@@ -74,14 +74,16 @@ imap_user=$1 imap_server=$2 mda_cmdline=$3
 shift 3
 readonly ssl keep imap_server imap_user mda_cmdline
 
+echo cd "$HOME"
 cd "$HOME"
 
-mda_cmd=`expr "$mda_cmdline" : ' *\([^ ]*\)'`
+mda_cmd=`exec expr "$mda_cmdline" : ' *\([^ ]*\)'`
 test -s $mda_cmd || {
 	exec >&2
-	case $mda_cmd in
-	  /*)	echo "Cannot find command '$mda_cmd'" ;;
-	  *)	echo "Cannot find command '$HOME/$mda_cmd'"
+	case $mda_cmd
+	in ./*)	echo "Cannot find command '$HOME/$mda_cmd'"
+	;; /*)	echo "Cannot find command '$mda_cmd'"
+	;; *)	echo "Cannot find command '$HOME/$mda_cmd'"
 	esac
 	exit 1
 }
