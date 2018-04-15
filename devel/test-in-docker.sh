@@ -2,10 +2,7 @@
 # -*- mode: shell-script; sh-basic-offset: 8; tab-width: 8 -*-
 # $ test-in-docker.sh $
 
-set -u	# expanding unset variable makes non-interactive shell exit immediately
-set -f	# disable pathname expansion by default -- makes e.g. eval more robust
-set -e	# exit on error -- know potential false negatives and positives !
-#et -x	# s/#/s/ may help debugging  (or run /bin/sh -x ... on command line)
+set -euf
 
 LANG=C LC_ALL=C; export LANG LC_ALL
 PATH='/sbin:/usr/sbin:/bin:/usr/bin'; export PATH
@@ -15,21 +12,22 @@ saved_IFS=$IFS; readonly saved_IFS
 warn () { printf '%s\n' "$*"; } >&2
 die () { printf '%s\n' "$@"; exit 1; } >&2
 
-known_argvals="'7.11', '8.6', '14.04.5', '16.04', '25', 'unstable' or 'centos70'"
+known_argvals="'7.11', '8.7', '9.4', '14.04.5', '16.04', '18.04',"
+known_argvals=$known_argvals" '25', '28', 'unstable' or 'centos70'"
 
 test $# != 0 || die '' "Usage: $0 {debian/ubuntu/fedora base version}" \
 		    '' "version options:" \
 		    "${known_argvals% or *} and ${known_argvals#* or }" ''
 
 case $known_argvals
-  in *"'$1'"*) ;; *) die "'$1' not any of these: $known_argvals".
+  in *"'$1'"*) ;; *) die "'$1': not any of these: $known_argvals".
 esac
 
 ver=$1
 
 # the scheme below works fine with current set of "supported" distributions...
 case $1 in [12]?.04*)	base=ubuntu debian=true
-	;; [23]*)	base=fedora debian=false
+	;; [23][0-9])	base=fedora debian=false
 	;; centos70)	base=centos debian=false; ver=7.0.1406
 	;; *)		base=debian debian=true
 esac
@@ -65,9 +63,10 @@ then
 		$dnf -v -y install make gcc gcc-c++ redhat-rpm-config git \
 			xapian-core-devel gmime-devel libtalloc-devel \
 			zlib-devel python2-sphinx man dtach emacs-nox gdb \
-			gnupg2-smime
+			gnupg2-smime xz
 		#$dnf -v -y autoremove # removes findutils in centos 7.0
 		$dnf -v -y clean all
+		test -x /usr/bin/gpg || ln -s gpg2 /usr/bin/gpg
 
 	fi
 	command -v dtach >/dev/null || { # centos7 does not have as of 2017-02
@@ -95,6 +94,9 @@ then
 		cd ..
 		rm -rf $dir $tgz
 	}
+	chmod 644 /etc/shadow
+	sed -i 's/^root:[^:]*/root:/' /etc/shadow
+	chmod 0 /etc/shadow
 	exit
 fi
 
@@ -119,6 +121,10 @@ x docker inspect --type=image --format='{{.ID}}' $image || {
 }
 
 name=$image-$user
+while case $name in *.*) true ;; *) false ;; esac
+do
+	name=${name%%.*}_${name#*.}
+done
 
 if status=`exec docker inspect -f '{{.State.Status}}' $name 2>&1`
 then
@@ -158,7 +164,7 @@ if test "${UID}" = 0; then
 		useradd -d "$home" -M -u $duid -U -G 0 -s /bin/bash \
 			-c "user $user" "$user" 2>/dev/null || :
 	}
-	echo If root access is desired, docker exec -it non-login shell...
+	echo If root access is desired, su -c /bin/sh
 	# Simple change user which may work as well as gosu(1) if not (better).
 	exec perl -e '
 		my @user = getpwnam $ARGV[0];
@@ -170,7 +176,7 @@ if test "${UID}" = 0; then
 		$< = $> = $user[2]; die "setting uids: $!\n" if $!;
 		exec qw"/bin/bash --login";' "$user"
   fi
-  echo login shell only for users...
+  echo Interactive bash shell only for users '(try /bin/sh)'...
   exit 1
 fi
 case ${BASH_VERSION-} in *.*)
