@@ -64,7 +64,7 @@ then
 		$dnf -v -y install make gcc gcc-c++ redhat-rpm-config git \
 			xapian-core-devel gmime-devel libtalloc-devel \
 			zlib-devel python2-sphinx man dtach emacs-nox gdb \
-			gnupg2-smime xz
+			openssl gnupg2-smime xz
 		#$dnf -v -y autoremove # removes findutils in centos 7.0
 		$dnf -v -y clean all
 		test -x /usr/bin/gpg || ln -s gpg2 /usr/bin/gpg
@@ -130,9 +130,9 @@ fi
 
 if test "${2-}" = '--detach'
 then
-	d=-d; shift
+	rmd=-d; shift
 else
-	d=
+	rmd=--rm
 fi
 
 if test "${2-}" = '--cntrname'
@@ -152,7 +152,7 @@ test $# = 0 || die "'$*': unknown arguments (or order)"
 
 if status=`exec docker inspect -f '{{.State.Status}}' $name 2>&1`
 then
-	if test "$d"
+	if test "$d" = '-d'
 	then die "'--detach' not applicable when container already exists."
 	fi
 	if test "$status" = running
@@ -171,7 +171,7 @@ fi
 	IFS=:; set -- `exec getent passwd "$user"`
 	home=$6
 	IFS=' '
-	x_exec docker run $d -it -e DISPLAY -e user="$user" -e home="$home" \
+	x_exec docker run $rmd -it -e DISPLAY -e user="$user" -e home="$home" \
 		--name "$name" -h "$name" -v "$home:$home" \
 		$xv $sopts "$image" /bin/bash --login
 #}
