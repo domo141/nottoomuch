@@ -46,7 +46,8 @@ then
 	sed 1,/^---begin-rc---/d "$0" > /etc/profile.d/setuser.sh
 	if $debian
 	then	export DEBIAN_FRONTEND=noninteractive
-		test $1 = 7.11 && emacs=emacs23-nox || emacs=emacs-nox
+		test $1 = 7.11 -o $1 = 14.04.5 &&
+			emacs=emacs23-nox || emacs=emacs-nox
 		apt-get update
 		apt-get install -y -q build-essential git \
 			libxapian-dev libgmime-2.6-dev libtalloc-dev \
@@ -120,14 +121,40 @@ x docker inspect --type=image --format='{{.ID}}' $image || {
 	x docker rm wip-$image
 }
 
-name=$image-$user
-while case $name in *.*) true ;; *) false ;; esac
-do
-	name=${name%%.*}_${name#*.}
-done
+# quick args...
+
+if test "${2-}" = '--create'
+then
+	exit
+fi
+
+if test "${2-}" = '--detach'
+then
+	d=-d; shift
+else
+	d=
+fi
+
+if test "${2-}" = '--cntrname'
+then
+	name=$3
+	shift 2
+else
+	name=$image-$user
+	while case $name in *.*) true ;; *) false ;; esac
+	do
+		name=${name%%.*}_${name#*.}
+	done
+fi
+shift
+
+test $# = 0 || die "'$*': unknown arguments (or order)"
 
 if status=`exec docker inspect -f '{{.State.Status}}' $name 2>&1`
 then
+	if test "$d"
+	then die "'--detach' not applicable when container already exists."
+	fi
 	if test "$status" = running
 	then x_exec docker exec -it "$name" /bin/bash --login
 	else x_exec docker start -i "$name"
@@ -144,7 +171,7 @@ fi
 	IFS=:; set -- `exec getent passwd "$user"`
 	home=$6
 	IFS=' '
-	x_exec docker run -it -e DISPLAY -e user="$user" -e home="$home" \
+	x_exec docker run $d -it -e DISPLAY -e user="$user" -e home="$home" \
 		--name "$name" -h "$name" -v "$home:$home" \
 		$xv $sopts "$image" /bin/bash --login
 #}
