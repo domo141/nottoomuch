@@ -6,6 +6,7 @@
 ;; to send email via gmail
 
 ;; you may need https://myaccount.google.com/lesssecureapps
+;; (and possibly https://accounts.google.com/DisplayUnlockCaptcha)
 ;; (working alternative not requiring the above would be nice)
 
 ;; when emacs suggest to save authinfo, press 'e' to edit and remove
