@@ -97,6 +97,7 @@ nottoomuch-remote_
 
 .. _nottoomuch-remote: nottoomuch-remote.rst
 
+
 building
 --------
 
@@ -113,27 +114,24 @@ make-one-notmuch-el_
 .. _make-one-notmuch-el: make-one-notmuch-el.pl
 
 
-repository branches
--------------------
+work in progress
+----------------
 
-in addition to **master** branch i have **dogfood** branch where stuff
-may not be as polished as in **master**, and **df-yymm** branch(es) with
-same file content as **dogfood** branch. see branches.txt_ for more
-information.
+some code that has not reached suitable maturity state (I am using to
+distribute changes to many dev machines) or is lacking reasonable
+ux/documentation, is located in wip/ subdictory.
 
-.. _branches.txt: branches.txt
 
 contributing
 ------------
 
-i accept patches in links to commit id, as pull requests and as in
-patch emails provided by git-format-patch (and git-send-email).
-i probably cherry-pick / rebase any stuff received instead of merging
-(and possibly do minor amends) so any pull requests made are to be
-manually closed.
+anything can be sent digitally to the email address below, or the ways
+any particular code repository interfaces provide (in case i receive
+email notication). thanks for all contributions i've received so far.
 
-see also branches.txt_ for reasons tho choose **master** or **df-yymm**
-branch as a (re)base branch...
+how contributions appear to the repository is another issue. in any
+case proper attribution is given in all cases (preferably as commit
+author but sometimes in other ways...).
 
 
 *too ät iki dot fi*
