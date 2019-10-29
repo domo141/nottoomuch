@@ -98,8 +98,10 @@ echo Starting interactive shell with modified environment.
 echo
 echo DYLD_* variables no longer work in macOS '(sierra, el capitan)'.
 echo : Use ./configure --prefix=\$PWD ';:' before testing
+echo : also for testing: python wrapper which symlinks libnotmuch.4.dylib to cwd
 echo : and ./configure --prefix=$HOME/.local/share/brew ';:' before installing.
 echo : '(and 4 testing CDLL("../../libnotmuch.{0:s}.dylib".format(SOVERSION)))'
+echo : also use ... install_name_tool or whatnot ... check these 2 lines out...
 echo
 export 'TERM'="$TERM"
 x exec ${SHELL} -i
