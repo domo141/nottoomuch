@@ -111,7 +111,7 @@ make-one-notmuch-el_
   and have not had problems -- but ymmv with your different setup in case
   trying this option.
 
-.. _make-one-notmuch-el: make-one-notmuch-el.pl
+.. _make-one-notmuch-el: build/make-one-notmuch-el.pl
 
 
 work in progress
@@ -119,7 +119,7 @@ work in progress
 
 some code that has not reached suitable maturity state (I am using to
 distribute changes to many dev machines) or is lacking reasonable
-ux/documentation, is located in wip/ subdictory.
+ux/documentation, is located in `wip/ <wip/>`__ subdictory.
 
 
 contributing
