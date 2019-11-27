@@ -6,7 +6,7 @@
 #           All rights reserved
 #
 # Created: Sun 20 Oct 2019 20:41:59 +0300 too
-# Last modified: Tue 29 Oct 2019 23:02:21 +0200 too
+# Last modified: Tue 26 Nov 2019 20:59:30 +0200 too
 
 # SPDX-License-Identifier: BSD-2-Clause
 
@@ -15,7 +15,7 @@ case ${ZSH_VERSION-} in *.*) emulate ksh; esac
 
 set -euf  # hint: sh -x thisfile [args] to trace execution
 
-die () { printf '%s\n' "$*"; exit 1; } >&2
+die () { printf '%s\n' "$@"; exit 1; } >&2
 
 x () { printf '+ %s\n' "$*" >&2; "$@"; }
 
@@ -25,11 +25,13 @@ if test "${1-}" != '--in-container--'
 then
 	today=`exec date +%Y%m%d`
 	test $# = 1 ||
-		die "Usage $0 '$today' -- i.e. today's date as the only arg"
+		die '' \
+		    "Usage $0 '$today' -- i.e. today's date as the only arg" \
+		 '' 'Note: may pull centos:6.10 from an external registry.' ''
 	test "$1" = $today || die "'$1' != '$today'"
 
 	if podman images -n --format='{{.Repository}}:{{.Tag}} {{.Created}}' |
-		grep $tname:$1'\>'
+		grep $tname:$1' '
 	then
 		echo Target image exists.
 		exit 0
@@ -45,7 +47,7 @@ then
 	esac
 
 	# remember in next container: --net=none \
-	x podman run --pull=never -it --privileged -v "$dn0:/mnt" \
+	x podman run -it --privileged -v "$dn0:/mnt" \
 		--tmpfs /tmp:rw,size=65536k,mode=1777 \
 		--name $tname-wip centos:6.10 \
 		/mnt/"${0##*/}" --in-container--
@@ -64,7 +66,7 @@ then
 	exit 0
 fi
 
-# rest of the file executed in container #
+### rest of this file is executed in container ###
 
 if test -f /.rerun
 then
@@ -87,10 +89,14 @@ set -x
 
 test -f /run/.containerenv || die "No '/run/.containerenv' !?"
 
-
 yum -y install epel-release centos-release-scl
 
-yum -y install devtoolset-8-gcc-c++ sclo-git212-git rh-python36
+yum -y install devtoolset-8-gcc-c++ sclo-git212-git rh-python36 zsh xz \
+	libtalloc-devel libffi-devel gettext-devel \
+	rh-python36-python-sphinx patchelf
+
+yum clean all
+rm -rf /var/lib/yum/yumdb
 
 (
  set +f +u

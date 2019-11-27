@@ -1,0 +1,249 @@
+From 6de36e059c0839fe24f30947b746b59af26fbb9b Mon Sep 17 00:00:00 2001
+From: Tomi Ollila <tomi.ollila@iki.fi>
+Date: Tue, 15 Nov 2016 22:47:09 +0200
+Subject: [SUPPORTIVE PATCH #2] hax: notmuch binary with embedded manpages
+
+¡¡ NOT TO BE MERGED TO NOTMUCH REPOSITORY !!
+
+Normal notmuch help system relies on notmuch manual pages installed
+separately.
+
+If you're like me and copy only built notmuch to some other systems
+the default help system provides notmuch help.
+
+This "hax" embeds built notmuch manual pages (in gzipped roff format)
+into the notmuch binary and creates `gzip -dc | nroff -man | less`
+pipeline to display requested notmuch manual page.
+
+---
+
+ Makefile.local          |   6 +++
+ haxs/embedded-manpages.c | 106 ++++++++++++++++++++++++++++++++++++++++++++++++
+ haxs/gen-manpage-code.pl |  70 ++++++++++++++++++++++++++++++++
+ notmuch.c               |   4 ++
+ 4 files changed, 186 insertions(+)
+ create mode 100644 haxs/embedded-manpages.c
+ create mode 100755 haxs/gen-manpage-code.pl
+
+diff --git a/Makefile.local b/Makefile.local
+index d1b0585..f912e7f 100644
+--- a/Makefile.local
++++ b/Makefile.local
+@@ -298,5 +298,11 @@ notmuch_client_srcs =		\
+ 	tag-util.c
+ 
++# --- hax part ---
++notmuch_client_srcs += haxs/embedded-manpages.c haxs/manpages-data.c
++haxs/manpages-data.c: $(MAN_GZIP_FILES) haxs/gen-manpage-code.pl
++	./haxs/gen-manpage-code.pl $@
++# --- end part ---
++
+ notmuch_client_modules = $(notmuch_client_srcs:.c=.o)
+ 
+ notmuch.o: version.stamp
+diff --git a/haxs/embedded-manpages.c b/haxs/embedded-manpages.c
+new file mode 100644
+index 0000000..7ae7441
+--- /dev/null
++++ b/haxs/embedded-manpages.c
+@@ -0,0 +1,106 @@
++/*
++ * This file is external hack to have namual pages embedded in single
++ * notmuch binary.
++ * As notmuch, this file is licenced under GPLv3+
++ */
++
++#include <unistd.h>
++#include <stdio.h>
++#include <string.h>
++#include <stdlib.h>
++#include <errno.h>
++#include <sys/wait.h>
++
++static void show_manpage(const char * content, int clen);
++
++extern struct {
++ // const unsigned char * in manpages-data.c
++    const char * manpage;
++    const int pagesize;
++} manpages[];
++
++void embedded_manpages(const char * topic);
++void embedded_manpages(const char * topic)
++{
++    if (strcmp(topic, "help") == 0)
++        topic = "notmuch";
++
++    int tlen1 = strlen(topic) + 1;
++    for (int i = 0; manpages[i].manpage; i++) {
++        const char * manpage = manpages[i].manpage;
++        if (memcmp(topic, manpage, tlen1) == 0)
++            show_manpage(manpage + tlen1, manpages[i].pagesize);
++    }
++    //
++    exit(1);
++}
++
++static void die(const char * msg) {
++    fprintf(stderr, "%s: %s\n", msg, strerror(errno));
++    exit(1);
++}
++
++static void xpipe(int * fds) {
++    if (pipe(fds) < 0) die("pipe failed");
++}
++static pid_t xfork() {
++    pid_t pid = fork();
++    if (pid < 0) die("fork failed");
++    return pid;
++}
++static void movefd(int ofd, int nfd) {
++    if (ofd == nfd) return;
++    dup2(ofd, nfd);
++    close(ofd);
++}
++
++static void show_manpage(const char * content, const int clength)
++{
++    int fds[2];
++
++    xpipe(fds);
++    if (xfork()) {
++        // parent
++        close(fds[1]);
++        movefd(fds[0], 0);
++        execlp("less", "less", NULL);
++        die("execlp failed");
++    }
++    int wfd = fds[1];
++    close(fds[0]);
++
++    xpipe(fds);
++    if (xfork() == 0) {
++        // child
++        close(fds[1]);
++        movefd(fds[0], 0);
++        movefd(wfd, 1);
++        execlp("nroff", "nroff", "-man", NULL);
++        die("execlp failed");
++    }
++    close(wfd);
++    wfd = fds[1];
++    close(fds[0]);
++
++    xpipe(fds);
++    if (xfork() == 0) {
++        // child
++        close(fds[1]);
++        movefd(fds[0], 0);
++        movefd(wfd, 1);
++        execlp("gzip", "gzip", "-dc", NULL);
++        die("execlp failed");
++    }
++    close(wfd);
++    wfd = fds[1];
++    close(fds[0]);
++
++    write(wfd, content, clength);
++    close(wfd);
++    while (1) {
++        if (wait(NULL) < 0 && errno != EINTR)
++            break;
++    }
++    exit(0);
++    // defunct until less(1) exits and init(8) reaps
++}
+diff --git a/haxs/gen-manpage-code.pl b/haxs/gen-manpage-code.pl
+new file mode 100755
+index 0000000..174960b
+--- /dev/null
++++ b/haxs/gen-manpage-code.pl
+@@ -0,0 +1,70 @@
++#!/usr/bin/perl
++# -*- mode: cperl; cperl-indent-level: 4 -*-
++
++use 5.8.1;
++use strict;
++use warnings;
++
++$ENV{'PATH'} = '/sbin:/usr/sbin:/bin:/usr/bin';
++
++my $mpdir = 'doc/_build/man';
++
++die "'$mpdir' missing; build docs first\n" unless -d $mpdir;
++
++die "Usage: $0 output-file\n" unless @ARGV == 1;
++
++my %skip = map { $_.'.gz' => 1 } qw/notmuch-emacs-mua.1 notmuch.3/;
++
++#print %skip, "\n";
++
++my @manpages;
++
++for my $pd (<$mpdir/man*>) {
++    #print $pd, "\n";
++
++    for my $f (<$pd/notmuch[.-]*.gz>) {
++	my $b = $f; $b =~ s/.*\///;
++	next if defined $skip{$b};
++	$b =~ s/[.]?\d+[.]gz//; $b =~ s/notmuch-//;
++	push @manpages, [ $b, $f ];
++	#print "$b: $f\n";
++    }
++}
++
++open O, '>', $ARGV[0] or die "Cannot write file '$ARGV[0]': $!\n";
++select O;
++print "/* generated */\n";
++
++my @pagevars;
++
++foreach (@manpages) {
++    my $vn = $_->[0];
++    $vn =~ tr/-/_/;
++    my $fn = $_->[1];
++    open I, '<', $fn or die "Cannot read $fn: $!\n";
++    binmode I;
++    my $buf;
++    sysread I, $buf, 32768;
++    close I;
++    my $buflen = length $buf;
++    my $c = 1;
++    print "\nstatic const unsigned char ${vn}[] = {\n";
++    push @pagevars, "{ $vn, $buflen }";
++    foreach (split //, $_->[0]) { print ord($_), ", "; } print "0,\n";
++    foreach (split //, $buf) {
++	if ($c & 15) { print ord($_), ", "; } else { print ord($_), ",\n"; }
++	$c++;
++    }
++    print "};\n";
++
++}
++
++my $nr_mp_1 = scalar @manpages + 1;
++
++print "\nstruct {
++  const unsigned char * manpage;
++  const int len;
++} manpages[$nr_mp_1] = {\n  ";
++
++print join ",\n  ", @pagevars;
++print ",\n  { (void *)0, 0 }\n};\n";
+diff --git a/notmuch.c b/notmuch.c
+index b9c3203..ccdf68e 100644
+--- a/notmuch.c
++++ b/notmuch.c
+@@ -258,6 +258,10 @@ _help_for (const char *topic_name)
+ 	return EXIT_SUCCESS;
+     }
+ 
++    // does not return
++    extern void embedded_manpages(const char *);
++    embedded_manpages(topic_name);
++
+     if (strcmp (topic_name, "help") == 0) {
+ 	printf ("The notmuch help system.\n\n"
+ 		"\tNotmuch uses the man command to display help. In case\n"
+-- 
+2.7.4
+

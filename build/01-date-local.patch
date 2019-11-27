@@ -1,0 +1,66 @@
+From 12be0ece53af07b9922e0d5aae50ec4a959dcdd7 Mon Sep 17 00:00:00 2001
+From: Tomi Ollila <too@iki.fi>
+Date: Mon, 23 Mar 2015 19:31:15 +0200
+Subject: [DRAFT PATCH] emacs: show local date next to Date: in case value differs
+
+When adding Date: header of a message to notmuch-show buffer, compare the
+date string with local representation of it and if these differ, output
+Date: {original-date-string}  ({local-date-representation})
+
+This is useful e.g. when mail system provides Date: strings with
+different timezone information than the sender is located at.
+
+---
+ emacs/notmuch-show.el | 25 +++++++++++++++++++------
+ 1 file changed, 19 insertions(+), 6 deletions(-)
+
+diff --git a/emacs/notmuch-show.el b/emacs/notmuch-show.el
+index f15f981..7e81859 100644
+--- a/emacs/notmuch-show.el
++++ b/emacs/notmuch-show.el
+@@ -460,15 +460,28 @@ (defun notmuch-show-insert-header (header header-value)
+   "Insert a single header."
+   (insert header ": " (notmuch-sanitize header-value) "\n"))
+ 
+-(defun notmuch-show-insert-headers (headers)
++(defun notmuch--make-date (timestamp)
++  (if (> timestamp 2147483647)
++      (message-make-date (seconds-to-time timestamp))
++    (message-make-date (encode-time timestamp 0 0 1 1 1970 t))))
++
++(defun notmuch-show-insert-headers (headers &optional timestamp)
+   "Insert the headers of the current message."
+-  (let ((start (point)))
++  (let ((start (point))
++	date-local)
+     (mapc (lambda (header)
+ 	    (let* ((header-symbol (intern (concat ":" header)))
+ 		   (header-value (plist-get headers header-symbol)))
+-	      (if (and header-value
+-		       (not (string-equal "" header-value)))
+-		  (notmuch-show-insert-header header header-value))))
++	      (when (and header-value
++			 (not (string-equal "" header-value)))
++		(if (and timestamp
++			 (string-equal header "Date")
++			 (not (string-equal
++			       (setq date-local (notmuch--make-date timestamp))
++			       header-value)))
++		    (setq header-value
++			  (format "%s  (%s)" header-value date-local)))
++		(notmuch-show-insert-header header header-value))))
+ 	  notmuch-message-headers)
+     (save-excursion
+       (save-restriction
+@@ -1012,7 +1025,7 @@ (defun notmuch-show-insert-msg (msg depth)
+     ;; Set `headers-start' to point after the 'Subject:' header to be
+     ;; compatible with the existing implementation. This just sets it
+     ;; to after the first header.
+-    (notmuch-show-insert-headers headers)
++    (notmuch-show-insert-headers headers (plist-get msg :timestamp))
+     (save-excursion
+       (goto-char content-start)
+       ;; If the subject of this message is the same as that of the
+-- 
+1.9.1
+
