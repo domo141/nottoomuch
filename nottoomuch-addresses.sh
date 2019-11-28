@@ -9,7 +9,7 @@ exit $?
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Mon 08 Feb 2016 15:28:55 +0200 too
+# Last modified: Tue 02 May 2017 23:00:48 +0300 too
 
 # Add these lines to your notmuch elisp configuration file
 # ;; (e.g to ~/.emacs.d/notmuch-config.el since notmuch 0.18):
@@ -130,6 +130,7 @@ my $configdir = ($ENV{XDG_CONFIG_HOME}||$ENV{HOME}.'/.config').'/nottoomuch';
 my $adbpath = $configdir . '/addresses';
 my $ignpath = $configdir . '/addresses.ignore';
 my $actpath = $configdir . '/addresses.active';
+my $toppath = $configdir . '/addresses.top';
 
 unless (@ARGV)
 {
@@ -382,7 +383,20 @@ my $mailbox    = qr/(?:$name_addr|$addr_spec)$comment*/;
 # In this particular purpose the cache code used in...
 my %seen; # ...Email::Address is "replaced" by %seen & %hash.
 my %hash;
+my $addrcount = 0;
 
+if (-f $toppath) {
+    die "Cannot open '$toppath': $!\n" unless open J, '<', $toppath;
+    while (<J>) {
+	next if defined $seen{$_};
+	$seen{$_} = 1;
+	$hash{$_} = 1;
+	$addrcount++;
+	print O $_;
+	print A $_;
+    }
+    close J;
+}
 my $database_path = qx/notmuch config get database.path/;
 chomp $database_path;
 my @exclude_re = map qr(^$database_path/$_), @exclude;
@@ -392,7 +406,6 @@ undef $database_path;
 undef @exclude;
 
 my $ptime = $sometime + 5;
-my $addrcount = 0;
 $| = 1;
 my $efn = tempfile(DIR => $configdir);
 open P, '-|', qw/notmuch search --sort=newest-first --output=files/, $sstr;
@@ -439,7 +452,7 @@ while (<$efn>) {
 	s/\?= =\?/\?==\?/g;
 	my (@mailboxes) = (/$mailbox/go);
       L: foreach (@mailboxes) {
-	    next if $seen{$_};
+	    next if defined $seen{$_};
 	    $seen{$_} = 1;
 
 	    my @comments = /($comment)/go;
