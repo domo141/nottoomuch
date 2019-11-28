@@ -8,12 +8,12 @@
 #	    All rights reserved
 #
 # Created: Thu 27 Oct 2016 20:46:23 EEST too
-# Last modified: Tue 29 Oct 2019 23:22:41 +0200 too
+# Last modified: Fri 29 Nov 2019 00:58:39 +0200 too
 
 case ~ in '~') echo "'~' does not expand. old /bin/sh?" >&2; exit 1; esac
 
-case ${BASH_VERSION-} in *.*) PATH=/ shopt -s xpg_echo; esac
-case ${ZSH_VERSION-} in *.*) PATH=/ emulate ksh; esac
+case ${BASH_VERSION-} in *.*) shopt -s xpg_echo; esac
+case ${ZSH_VERSION-} in *.*) emulate ksh; esac
 
 set -euf  # hint: sh -x thisfile [args] to trace execution
 
@@ -63,8 +63,8 @@ esac
 dn0=${fn0%/*}
 
 x cd "$dn0"
-test -f ../mboxviewfs.c || die "No 'mboxviewfs.c' in '$dn0'"
-newer1=`exec ls -t ../mboxviewfs.c mboxviewfs 2>/dev/null` || :
+test -f mboxviewfs.c || die "No 'mboxviewfs.c' in '$dn0'"
+newer1=`exec ls -t mboxviewfs.c mboxviewfs 2>/dev/null` || :
 
 case $newer1 in mboxviewfs.c*) # mboxviewfs.c is never (or no mboxviewfs)
 	x sh mboxviewfs.c
