@@ -4,25 +4,28 @@
 #
 # Author: Tomi Ollila -- too ät iki piste fi
 #
-#	Copyright (c) 2014-2016 Tomi Ollila
+#	Copyright (c) 2014-2019 Tomi Ollila
 #	    All rights reserved
 #
 # Created: Sun 29 Jun 2014 16:20:24 EEST too
-# Last modified: Sun 03 Jan 2016 19:36:35 +0200 too
+# Last modified: Sun 15 Dec 2019 01:08:10 +0200 too
 
-# Handle mailto: links with notmuch emacs client. In case of graphical
-# display (the usual case), use emacs in server mode (with special server
-# socket) and run emacsclient on it. On non-graphical terminal run emacs
-# in terminal mode.
+# Handle mailto: links with notmuch emacs client. In case of
+# graphical display (the usual case), use emacs in server mode
+# (with special server socket) and run emacsclient on it.
+# On non-graphical terminal run emacs in terminal mode.
 # For special use cases (e.g. for wrappers) there are some extra
 # command line options (currently -nw and --from=<address>).
+
+# There are some hacks involved to get things working, and may break in the
+# future. However, my guess is that this will just work for years to come.
 
 use 5.8.1;
 use strict;
 use warnings;
 use Cwd;
 
-# override "default" From: (by setting to non-empty string) if desired
+# override "default" From: (by setting $from to non-empty string) if desired
 my $from = '';
 
 # fyi: default emacs server socket name is 'server' (in /tmp/emacs$UID/)...
@@ -61,11 +64,10 @@ sub mail($$)
 	    push @{$hash{$hfname}}, $_;
 	}
     }
-    $" = ", ";
+    $" = ', ';
     sub liornil($) {
 	no warnings; # maybe the warning is effective when %hash reassigned ?
 	return @{$hash{$_[0]}}? "\"@{$hash{$_[0]}}\"": "nil";
-	use warnings;
     }
     my $to = liornil 'to';
     my $subject = liornil 'subject';
@@ -76,18 +78,13 @@ sub mail($$)
     }
     else { $from = 'nil'; }
 
-    my @elisp = ( "(with-demoted-errors", "(require 'notmuch)",
-		  "(notmuch-mua-mail $to $subject $from nil",
-		  "	(notmuch-mua-get-switch-function))" );
-    if ($use_emacsclient) {
-	my $cwd = cwd(); $cwd =~ s/("|\\)/\\$1/g;
-	push @elisp, qq' (cd "$cwd")';
-    }
+    my @elisp = ( "(with-demoted-errors", " (require 'notmuch)",
+		  "   (notmuch-mua-mail $to $subject $from nil",
+		  "      (notmuch-mua-get-switch-function))" );
     sub ideffi($) {
 	no warnings; # ditto, now with @elisp too...
 	return unless @{$hash{$_[0]}};
 	push @elisp, " (message-goto-$_[0]) (insert \"@{$hash{$_[0]}}\")";
-	use warnings;
     }
     ideffi 'cc';
     ideffi 'bcc';
@@ -100,14 +97,21 @@ sub mail($$)
 	  . qq' (vector 0 "" "mailto" "" "$m" "" 0 0 ""))';
     }
     $" = "\n";
-    ideffi 'body';
-    push @elisp, " (goto-char (point-max))";
-    push @elisp, " (if (/= (point) (line-beginning-position))";
-    push @elisp, "    (newline))";
-    push @elisp, " (set-buffer-modified-p nil) (message-goto-to))";
 
-    #print "@elisp\n"; exit 0;
-
+    if (@{$hash{body}}) {
+	# hacking body addition just before signature setup (since message
+	# setup hook, which is called later, may add e.g. MML header[s])
+	splice @elisp, 2, 0, (
+	  ' (let ((message-signature-setup-hook message-signature-setup-hook))',
+	  "   (add-hook 'message-signature-setup-hook",
+	qq'     (lambda () (message-goto-body) (insert "@{$hash{body}}")',
+	  '                (if (/= (point) (line-beginning-position))',
+	  '                  (newline))))' )
+    }
+    if ($use_emacsclient) {
+	my $cwd = cwd(); $cwd =~ s/("|\\)/\\$1/g;
+	push @elisp, qq' (cd "$cwd")';
+    }
     my @cmdline;
 
     if ($use_emacsclient) {
@@ -117,19 +121,22 @@ sub mail($$)
 	# code to stop emacs if all frames are closed, there are no
 	# clients and no modified buffers which have file name
 	splice @elisp, 2, 0, (
-'(defun delete-mailto-frame-function (frame)
-  (if (and (= (length server-clients) 0)
-           (< (length (delq frame (frame-list))) 2)
-           (not (memq t (mapcar (lambda (buf) (and (buffer-file-name buf)
-                                                   (buffer-modified-p buf)))
-                                (buffer-list)))))
-      (kill-emacs)))',
-"(add-hook 'delete-frame-functions 'delete-mailto-frame-function)" );
+' (defun delete-mailto-frame-function (frame)
+   (if (and (= (length server-clients) 0)
+            (< (length (delq frame (frame-list))) 2)
+            (not (memq t (mapcar (lambda (buf) (and (buffer-file-name buf)
+                                                    (buffer-modified-p buf)))
+                                 (buffer-list)))))
+       (kill-emacs)))',
+" (add-hook 'delete-frame-functions 'delete-mailto-frame-function)" );
     }
     else {
 	my $emacs = $ENV{EMACS} || 'emacs';
 	@cmdline = ( $emacs, '-nw' );
     }
+    push @elisp, '))';
+
+    #print "@elisp\n"; exit 0;
 
     push @cmdline, '--eval', "@elisp";
 
