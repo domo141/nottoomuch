@@ -2,7 +2,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Wed 27 Nov 2019 23:12:02 +0200 too
+# Last Modified: Sun 12 Jan 2020 18:51:45 +0200 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -18,6 +18,7 @@ die () { printf '%s\n' "$@"; exit 1; } >&2
 usage () { print %s\\n "Usage: $0 $cmd $*"; exit 1; } >&2
 
 x () { printf '+ %s\n' "$*" >&2; "$@"; }
+x_eval () { printf '+ %s\n' "$*" >&2; eval "$*"; }
 x_exec () { printf '+ %s\n' "$*" >&2; exec "$@"; die "exec '$*' failed"; }
 
 yesno ()
