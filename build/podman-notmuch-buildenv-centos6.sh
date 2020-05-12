@@ -6,7 +6,7 @@
 #           All rights reserved
 #
 # Created: Sun 20 Oct 2019 20:41:59 +0300 too
-# Last modified: Tue 26 Nov 2019 20:59:30 +0200 too
+# Last modified: Fri 08 May 2020 00:47:48 +0300 too
 
 # SPDX-License-Identifier: BSD-2-Clause
 
@@ -91,9 +91,11 @@ test -f /run/.containerenv || die "No '/run/.containerenv' !?"
 
 yum -y install epel-release centos-release-scl
 
+more_for_emacs='ncurses-devel libxml2-devel gnutls-devel'
+
 yum -y install devtoolset-8-gcc-c++ sclo-git212-git rh-python36 zsh xz \
 	libtalloc-devel libffi-devel gettext-devel \
-	rh-python36-python-sphinx patchelf
+	rh-python36-python-sphinx patchelf $more_for_emacs
 
 yum clean all
 rm -rf /var/lib/yum/yumdb
