@@ -42,7 +42,9 @@ my $eldeps = 'emacs/.eldeps';
 open ELDEPS, '<', $eldeps or die "Opening $eldeps failed: $!\n";
 
 my $sources = [ 'emacs/notmuch.el' ];
-my %deps = ( 'emacs/notmuch.el' => [ 'emacs/notmuch-version.el' ] );
+# hacks to make this work. perhaps investigate 'requires for the sources...
+my %deps = ( 'emacs/notmuch.el' => [ 'emacs/notmuch-version.el',
+				     'emacs/notmuch-jump.el' ] );
 
 # load dependencies.
 
