@@ -6,7 +6,7 @@
 #           All rights reserved
 #
 # Created: Sun 20 Oct 2019 20:41:59 +0300 too
-# Last modified: Tue 26 Nov 2019 21:00:14 +0200 too
+# Last modified: Wed 12 Aug 2020 23:06:24 +0300 too
 
 # Note: writes material under $HOME. grep HOME {thisfile} to see details...
 
@@ -276,7 +276,7 @@ esac
 
 
 : 3 :
-case $* in *' 3 '*) ## build notmuch
+case $* in *' 3 '*) ## build notmuch (remember '7' -- rpath)
 	cd /mnt
 	sed '/command .* gpgme-config/,/^else/ s/errors=/#errors=/' configure \
 		> hax-configure
@@ -321,6 +321,19 @@ esac
 case $* in *' 7 '*) ## set rpath to notmuch(1) (not notmuch-shared (for now))
 	cd /mnt
 	patchelf --set-rpath '$ORIGIN/../lib' notmuch
+esac
+
+: 8 :
+case $* in *' 8wip '*) ## build and package emacs (tested emacs 27.1)
+	cd /mnt/emacs-[1-9]*[0.9]
+	./configure --prefix=$HOME/.local
+	make
+	make install DESTDIR=$PWD/tmp-dd
+	( cd tmp-dd/$HOME/.local &&
+	  exec rm -rf include lib share/applications share/icons share/metainfo
+	)
+	ver=`cd tmp-dd/$HOME/.local/share/emacs; echo [1-9]*`
+	tar -C tmp-dd/$HOME -zcf emacs-$ver-centos6.tar.gz .local
 esac
 
 :

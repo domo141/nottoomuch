@@ -2,13 +2,13 @@
 # -*- shell-script -*-
 #
 # Created: Tue 29 May 2012 21:30:17 EEST too
-# Last modified: Sat 29 Oct 2016 15:43:48 +0300 too
+# Last modified: Mon 27 Jul 2020 22:14:36 +0300 too
 
 # See first ./nottoomuch-remote.rst and then maybe:
 # http://notmuchmail.org/remoteusage/
 # http://notmuchmail.org/remoteusage/124/ <- this script
 
-set -eu
+set -euf
 # To trace execution, uncomment next line:
 #exec 6>>remote-errors; BASH_XTRACEFD=6; echo -- >&6; set -x; env >&6
 
