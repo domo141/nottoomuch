@@ -1,24 +1,34 @@
-From 12be0ece53af07b9922e0d5aae50ec4a959dcdd7 Mon Sep 17 00:00:00 2001
-From: Tomi Ollila <too@iki.fi>
-Date: Mon, 23 Mar 2015 19:31:15 +0200
-Subject: [DRAFT PATCH] emacs: show local date next to Date: in case value differs
+From 6696121faeefb28f76c69ef97c3b4f20f5d75d68 Mon Sep 17 00:00:00 2001
+From: Tomi Ollila <tomi.ollila@iki.fi>
+Date: Wed, 12 Aug 2020 23:40:13 +0300
+Subject: [DRAFT PATCH V2] emacs: show local date next to Date: in case value differs
 
 When adding Date: header of a message to notmuch-show buffer, compare the
 date string with local representation of it and if these differ, output
 Date: {original-date-string}  ({local-date-representation})
 
-This is useful e.g. when mail system provides Date: strings with
+This is useful when mail system provides Date: strings with
 different timezone information than the sender is located at.
 
 ---
- emacs/notmuch-show.el | 25 +++++++++++++++++++------
- 1 file changed, 19 insertions(+), 6 deletions(-)
+
+V2 of id:1427132722-20346-1-git-send-email-tomi.ollila@iki.fi
+sent Mon, 23 Mar 2015 19:45:22 +0200.
+
+Resent due to conflict during rebase Aug 2020.
+
+And still an "early" draft =D, see discussion at
+
+https://nmbug.notmuchmail.org/nmweb/search/id%3A1427132722-20346-1-git-send-email-tomi.ollila%40iki.fi
+
+ emacs/notmuch-show.el | 19 ++++++++++++++++---
+ 1 file changed, 16 insertions(+), 3 deletions(-)
 
 diff --git a/emacs/notmuch-show.el b/emacs/notmuch-show.el
-index f15f981..7e81859 100644
+index b0f2d28b..6498c041 100644
 --- a/emacs/notmuch-show.el
 +++ b/emacs/notmuch-show.el
-@@ -460,15 +460,28 @@ (defun notmuch-show-insert-header (header header-value)
+@@ -482,14 +482,27 @@ (defun notmuch-show-insert-header (header header-value)
    "Insert a single header."
    (insert header ": " (notmuch-sanitize header-value) "\n"))
  
@@ -36,11 +46,8 @@ index f15f981..7e81859 100644
      (mapc (lambda (header)
  	    (let* ((header-symbol (intern (concat ":" header)))
  		   (header-value (plist-get headers header-symbol)))
--	      (if (and header-value
--		       (not (string-equal "" header-value)))
--		  (notmuch-show-insert-header header header-value))))
-+	      (when (and header-value
-+			 (not (string-equal "" header-value)))
+ 	      (when (and header-value
+ 			 (not (string-equal "" header-value)))
 +		(if (and timestamp
 +			 (string-equal header "Date")
 +			 (not (string-equal
@@ -48,11 +55,10 @@ index f15f981..7e81859 100644
 +			       header-value)))
 +		    (setq header-value
 +			  (format "%s  (%s)" header-value date-local)))
-+		(notmuch-show-insert-header header header-value))))
+ 		(notmuch-show-insert-header header header-value))))
  	  notmuch-message-headers)
      (save-excursion
-       (save-restriction
-@@ -1012,7 +1025,7 @@ (defun notmuch-show-insert-msg (msg depth)
+@@ -1056,7 +1069,7 @@ (defun notmuch-show-insert-msg (msg depth)
      ;; Set `headers-start' to point after the 'Subject:' header to be
      ;; compatible with the existing implementation. This just sets it
      ;; to after the first header.
@@ -62,5 +68,5 @@ index f15f981..7e81859 100644
        (goto-char content-start)
        ;; If the subject of this message is the same as that of the
 -- 
-1.9.1
+2.25.1
 
