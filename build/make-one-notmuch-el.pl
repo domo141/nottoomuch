@@ -35,7 +35,25 @@ needf 1, 'emacs/notmuch.el';
 needf 1, 'emacs/Makefile.local';
 needf 1, 'Makefile.local';
 
-system qw'make emacs/.eldeps WITH_EMACS=1';
+$_ = qx/git describe --abbrev=7 --match '[0-9.]*'/;
+chomp; s/_/~/; s/-/+/; s/-/~/;
+my $version = $_;
+
+open I, '<', 'emacs/notmuch-version.el.tmpl' or die $!;
+open O, '>', 'emacs/notmuch-version.el.tmp' or die $!;
+while (<I>) {
+    s/%VERSION%/"$version"/;
+    print O $_;
+}
+close O or die $!;
+close I or die $!;
+rename 'emacs/notmuch-version.el.tmp', 'emacs/notmuch-version.el';
+symlink 'emacs/notmuch-version.el', 'version.stamp' unless -e 'version.stamp';
+
+#system qw'make -d -r -f emacs/Makefile.local emacs/.eldeps
+system qw'make -r -f emacs/Makefile.local emacs/.eldeps
+	  WITH_EMACS=1 srcdir=. V=1 quiet=emacs';
+#system qw'make emacs/.eldeps WITH_EMACS=1';
 die unless $? == 0;
 
 my $eldeps = 'emacs/.eldeps';
@@ -86,8 +104,9 @@ dodep $sources;
 open ONE, '>', 'emacs/one-notmuch.el'
   or die "Opening emacs/one-notmuch.el for writing failed: $!\n";
 
+my $oline = 0;
 foreach (@files) {
-    print "Reading $_ ...\n";
+    print "Reading $_ ($oline)...\n";
     open I, '<', $_ or die $!;
     binmode I;
     while (<I>) {
@@ -102,6 +121,7 @@ foreach (@files) {
 	}
 	s/(\(provide)\s+(.*)/(eval-and-compile $1 $2)/;
 	print ONE $_;
+	$oline += 1;
     }
     close I;
 }
@@ -113,10 +133,15 @@ close ONE;
 
 # build one-notmuch.elc
 
-print "Wrote\n";
+print "Wrote ($oline lines):\n";
 system qw'ls -l emacs/one-notmuch.el';
-print "\nExecuting make emacs/one-notmuch.elc WITH_EMACS=1\n";
-system qw'make emacs/one-notmuch.elc WITH_EMACS=1';
+
+#my @cmdline = qw'emacs -batch -f batch-byte-compile emacs/one-notmuch.el';
+#print "\nExecuting @cmdline\n";
+#system @cmdline;
+
+system qw'make -r -f emacs/Makefile.local emacs/one-notmuch.elc
+	  WITH_EMACS=1 srcdir=. V=1 quiet=emacs';
 die unless $? == 0;
 system qw'ls -l emacs/one-notmuch.elc';
 exit $?
