@@ -9,7 +9,7 @@ exit $?
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Tue 02 May 2017 23:00:48 +0300 too
+# Last modified: Sat 03 Oct 2020 03:10:10 +0300 too
 
 # Add these lines to your notmuch elisp configuration file
 # ;; (e.g to ~/.emacs.d/notmuch-config.el since notmuch 0.18):
@@ -26,9 +26,15 @@ exit $?
 
 # HISTORY
 #
+# Version 2.5  2020-10-03 03:10:20 UTC
+#   * Added reading of new file 'addresses.top'. The addresses listed there
+#     are written on the top of the 'addresses.active' while doing --update
+#     or --rebuild. These addresses are matched first when searches done.
+#
 # Version 2.4  2016-01-02 21:00:00 UTC
-#   * Separated mail file list reading using notmuch(1) to reading through
-#     the mail files so that notmuch database is locked for shorter time.
+#   * Separated reading of the mail file list using notmuch(1) from scanning
+#     the email addresses from the mail files. Now notmuch database is locked
+#     for shorter time period.
 #   * Some internal utf8 handling (related output warnings went away).
 #
 # Version 2.3  2014-09-17 15:59:44 UTC
@@ -622,7 +628,7 @@ B<nottoomuch-addresses.sh --help>  for more help
 
 =head1 VERSION
 
-2.3 (2014-09-17)
+2.5 (2020-10-03)
 
 =head1 <SEARCH STRING>
 
@@ -641,12 +647,18 @@ Search is not done unless there is at least 3 octets in search string.
 This option is used to incrementally update the "address cache" with
 new addresses that are available in mails received since last update.
 
+All the sender and receiver addresses are collected.
+
+The addresses in cache are sorted "newest first"; recently seen addresses
+are matched first when doing searches (but see also the "top" file section
+below).
+
 =head2 B<--rebuild>
 
 With this option the address cache is created (or rebuilt from scratch).
 
-In addition to initial creation this option is useful when some build options
-(which affect to all addresses) are desired to be changed.
+In addition to initial creation this option is useful when some build
+options (which affect to all addresses) are desired to be changed.
 
 Sometimes some of the new emails received may have Date: header point too
 much in the past (one week before last update). Update uses email Date:
@@ -689,24 +701,35 @@ This method name is modeled from
 
 =back
 
-=head1 IGNORE FILE
+=head1 "TOP" FILE
 
-Some of the addresses collected may be valid but those still seems to
-be noisy junk. One may additionally want to just hide some email
+Some of the recipient addresses you may want to use are not collected from
+the emails just in the format you liked. Also some of the addresses you
+desire to be found first may get buried deeper in the list of collected
 addresses.
 
 When running B<--update> the output shows the path of address cache
 file (usually C<$HOME/.config/nottoomuch/addresses>). If there is file
-C<addresses.ignore> in the same directory that file is read as
-newline-separated list of addresses which are not to be included in
-address cache file.
+C<addresses.top> in the same directory, that file is read as
+newline-separated list of addresses which are to be included on the top
+of the address cache file.
+
+=head1 IGNORE FILE
+
+Some of the addresses collected may be valid but those still seems to
+be noisy junk. You may additionally want to just hide some email
+addresses.
+
+If there is file C<addresses.ignore> in the same directory as C<addresses>
+(and perhaps C<addresses.top>), that file is read as newline-separated list
+of addresses which are *not* to be included in the address cache file.
 
 Use your text editor to open both of these files. Then move address
 lines to be ignored from B<addresses> to B<addresses.ignore>. After
 saving these 2 files the moved addresses will not reappear in
 B<addresses> file again.
 
-Version 2.0 of nottoomuch-addresses.sh supports regular expressions in
+Since 2012 nottoomuch-addresses.sh has supported regular expressions in
 ignore file. Lines in format I</regexp/> or I</regexp/i> defines (perl)
 I<regexp>s which are used to match email addresses for ignoring. The
 I</i> format makes regular expression case-insensitive -- although this

@@ -31,13 +31,19 @@ How To Install
 
       (require 'notmuch-address)
       (setq notmuch-address-command "/path/to/nottoomuch-addresses.sh")
-      (notmuch-address-message-insinuate)
 
 5. Restart emacs notmuch mua (or eval above lines) and start composing
    new mail. When adding recipient to To: field. press TAB after 3
    or more characters have been added. In case you get 2 or more address
    matches, use arrow keys in minibuffer to choose desired recipient...
 
-6. Enjoy!
+6. (Optional) the default address completion notmuch emacs mua uses when
+   addresses are completed using external command may be hard to use with
+   nottoomuch-addresses.
+   I've been using `selection-menu.el <selection-menu.rst>`_ happily all the
+   time I've been using nottoomuch-addresses.sh. I'd like to know about
+   alternatives (ido, ivy, helm) but as it works well enough haven't bothered.
+
+7. Enjoy!
 
 ``./nottoomuch-addresses.sh --help``  provides more detailed usage information.
