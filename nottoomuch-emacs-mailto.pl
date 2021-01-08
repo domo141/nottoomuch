@@ -8,7 +8,7 @@
 #	    All rights reserved
 #
 # Created: Sun 29 Jun 2014 16:20:24 EEST too
-# Last modified: Sun 15 Dec 2019 01:08:10 +0200 too
+# Last modified: Sat 09 Jan 2021 00:25:50 +0200 too
 
 # Handle mailto: links with notmuch emacs client. In case of
 # graphical display (the usual case), use emacs in server mode
@@ -30,6 +30,8 @@ my $from = '';
 
 # fyi: default emacs server socket name is 'server' (in /tmp/emacs$UID/)...
 my $socket_name = 'mailto-server';
+
+#open O, '>', "/tmp/mmm.$$"; print O "@ARGV\n"; close O;
 
 while (@ARGV) {
     $_ = $ARGV[0];
@@ -71,15 +73,23 @@ sub mail($$)
     }
     my $to = liornil 'to';
     my $subject = liornil 'subject';
-    #my $from = liornil 'from';
+    my $other_hdrs = 'nil';
     if ($from) {
 	$from =~ s/("|\\)/\\$1/g;
-	$from = "'((From . \"$from\"))";
+	$other_hdrs = "'((From . \"$from\")";
     }
-    else { $from = 'nil'; }
+    if (@{$hash{'in-reply-to'}}) {
+     	my $m = "@{$hash{'in-reply-to'}}";
+	$other_hdrs = "'(" if $other_hdrs eq 'nil';
+	$other_hdrs .= "(In-Reply-to . \"$m\")";
+    }
+    $other_hdrs .= ')' if $other_hdrs ne 'nil';
 
     my @elisp = ( "(with-demoted-errors", " (require 'notmuch)",
-		  "   (notmuch-mua-mail $to $subject $from nil",
+		  " (notmuch-mua-mail",
+		  "      $to",
+		  "      $subject",
+		  "      $other_hdrs",
 		  "      (notmuch-mua-get-switch-function))" );
     sub ideffi($) {
 	no warnings; # ditto, now with @elisp too...
@@ -89,13 +99,6 @@ sub mail($$)
     ideffi 'cc';
     ideffi 'bcc';
     ideffi 'keywords';
-    if (@{$hash{'in-reply-to'}}) {
-	my $m = "@{$hash{'in-reply-to'}}";
-	# 9 elem vector: 0 subject from date message-id references 0 0 ""
-	# anyway, quite a hack... and fragile if the vector changes...
-	push @elisp, ' (setq message-reply-headers'
-	  . qq' (vector 0 "" "mailto" "" "$m" "" 0 0 ""))';
-    }
     $" = "\n";
 
     if (@{$hash{body}}) {
@@ -135,9 +138,6 @@ sub mail($$)
 	@cmdline = ( $emacs, '-nw' );
     }
     push @elisp, '))';
-
-    #print "@elisp\n"; exit 0;
-
     push @cmdline, '--eval', "@elisp";
 
     #print "@cmdline\n"; exit 0;
