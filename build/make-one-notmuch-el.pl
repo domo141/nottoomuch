@@ -104,6 +104,8 @@ dodep $sources;
 open ONE, '>', 'emacs/one-notmuch.el'
   or die "Opening emacs/one-notmuch.el for writing failed: $!\n";
 
+#print ONE ";; -*- lexical-binding: t -*-\n\n";
+
 my $oline = 0;
 foreach (@files) {
     print "Reading $_ ($oline)...\n";
@@ -120,6 +122,30 @@ foreach (@files) {
 	    next
 	}
 	s/(\(provide)\s+(.*)/(eval-and-compile $1 $2)/;
+
+	# (require ...) is not "enough" when fn is defined in the same file...
+	# ...so pick functions that need eval-and-compile...
+	if ( / ^ \( defun \s+ (?:
+		 notmuch-show-toggle-process-crypto
+	       | notmuch-show-next-button
+	       | notmuch-show-previous-button
+	       | notmuch-help
+	       | notmuch-mua-new-mail
+	       | notmuch-jump-search
+	       | notmuch-show-forward-message
+	       | notmuch-show-reply-sender
+	       | notmuch-show-reply
+	       | notmuch-show-view-raw-message
+	       ) \s /x ) {
+	    # parenthesis count; let's hope no parens in docstrings messes this
+	    my $prc = tr/(/(/ - tr/)/)/;
+	    print ONE "(eval-and-compile\n$_";
+	    while (<I>) {
+		$prc += tr/(/(/ - tr/)/)/;
+		print (ONE ")\n"), last if /^\s*$/ && $prc == 0;
+		print (ONE $_);
+	    }
+	}
 	print ONE $_;
 	$oline += 1;
     }
