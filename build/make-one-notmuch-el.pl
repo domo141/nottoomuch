@@ -104,7 +104,7 @@ dodep $sources;
 open ONE, '>', 'emacs/one-notmuch.el'
   or die "Opening emacs/one-notmuch.el for writing failed: $!\n";
 
-#print ONE ";; -*- lexical-binding: t -*-\n\n";
+print ONE ";; -*- lexical-binding: t -*-\n\n";
 
 my $oline = 0;
 foreach (@files) {
