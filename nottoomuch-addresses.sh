@@ -12,11 +12,10 @@ exit $?
 # Last modified: Sat 03 Oct 2020 03:10:10 +0300 too
 
 # Add these lines to your notmuch elisp configuration file
-# ;; (e.g to ~/.emacs.d/notmuch-config.el since notmuch 0.18):
+# ;; (e.g to ~/.emacs.d/notmuch-config.el since notmuch 0.22):
 #
 # (require 'notmuch-address)
 # (setq notmuch-address-command "/path/to/nottoomuch-addresses.sh")
-# (notmuch-address-message-insinuate)
 
 # Documentation at the end. Encoding: utf-8.
 

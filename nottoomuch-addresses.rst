@@ -26,7 +26,7 @@ How To Install
 
 4. In case you're using emacs mua with notmuch, edit your notmuch
    configuration for emacs (e.g. ``~/.emacs.d/notmuch-config.el`` since
-   notmuch 0.18) with the following content:
+   notmuch 0.22) with the following content:
    ::
 
       (require 'notmuch-address)
