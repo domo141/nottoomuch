@@ -1,7 +1,10 @@
-From 6de36e059c0839fe24f30947b746b59af26fbb9b Mon Sep 17 00:00:00 2001
+From 9d74ae6476e98818bb4e6166a21617a7c8b7baa1 Mon Sep 17 00:00:00 2001
 From: Tomi Ollila <tomi.ollila@iki.fi>
-Date: Tue, 15 Nov 2016 22:47:09 +0200
-Subject: [SUPPORTIVE PATCH #2] hax: notmuch binary with embedded manpages
+Date: Sun, 17 Jan 2021 20:47:09 +0200
+Subject: [SUPPORTIVE PATCH #2] hack: notmuch help ... using embedded manual pages
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 
 ¡¡ NOT TO BE MERGED TO NOTMUCH REPOSITORY !!
 
@@ -11,41 +14,60 @@ separately.
 If you're like me and copy only built notmuch to some other systems
 the default help system provides notmuch help.
 
-This "hax" embeds built notmuch manual pages (in gzipped roff format)
+This hack embeds built notmuch manual pages (in gzipped roff format)
 into the notmuch binary and creates `gzip -dc | nroff -man | less`
 pipeline to display requested notmuch manual page.
-
 ---
-
- Makefile.local          |   6 +++
- haxs/embedded-manpages.c | 106 ++++++++++++++++++++++++++++++++++++++++++++++++
- haxs/gen-manpage-code.pl |  70 ++++++++++++++++++++++++++++++++
- notmuch.c               |   4 ++
- 4 files changed, 186 insertions(+)
- create mode 100644 haxs/embedded-manpages.c
- create mode 100755 haxs/gen-manpage-code.pl
+ Makefile.local               |  11 ++++
+ notmuch.c                    |   4 ++
+ x-emmapa/embedded-manpages.c | 106 +++++++++++++++++++++++++++++++++++
+ x-emmapa/gen-manpage-code.pl |  70 +++++++++++++++++++++++
+ 4 files changed, 191 insertions(+)
+ create mode 100644 x-emmapa/embedded-manpages.c
+ create mode 100755 x-emmapa/gen-manpage-code.pl
 
 diff --git a/Makefile.local b/Makefile.local
-index d1b0585..f912e7f 100644
+index bbb8f0b6..f14f193a 100644
 --- a/Makefile.local
 +++ b/Makefile.local
-@@ -298,5 +298,11 @@ notmuch_client_srcs =		\
+@@ -252,6 +252,17 @@ notmuch_client_srcs =		\
+ 	mime-node.c		\
  	tag-util.c
  
-+# --- hax part ---
-+notmuch_client_srcs += haxs/embedded-manpages.c haxs/manpages-data.c
-+haxs/manpages-data.c: $(MAN_GZIP_FILES) haxs/gen-manpage-code.pl
-+	./haxs/gen-manpage-code.pl $@
-+# --- end part ---
++# --- embedded manpages part begin ---
++x-emmapa:
++	mkdir $@
++x-emmapa/embedded-manpages.o x-emmapa/manpages-data.o: | x-emmapa
++notmuch_client_srcs += x-emmapa/embedded-manpages.c
++notmuch_client_srcs += $(CURDIR)/x-emmapa/manpages-data.c
++$(CURDIR)/x-emmapa/manpages-data.c: $(MAN_GZIP_FILES)
++$(CURDIR)/x-emmapa/manpages-data.c: $(srcdir)/x-emmapa/gen-manpage-code.pl
++	$(srcdir)/x-emmapa/gen-manpage-code.pl $@
++# --- embedded manpages part end ----
 +
  notmuch_client_modules = $(notmuch_client_srcs:.c=.o)
  
  notmuch.o: version.stamp
-diff --git a/haxs/embedded-manpages.c b/haxs/embedded-manpages.c
+diff --git a/notmuch.c b/notmuch.c
+index 4ef1484f..0a007ff0 100644
+--- a/notmuch.c
++++ b/notmuch.c
+@@ -305,6 +305,10 @@ _help_for (const char *topic_name)
+ 	return EXIT_SUCCESS;
+     }
+ 
++    // does not return
++    extern void embedded_manpages(const char *);
++    embedded_manpages(topic_name);
++
+     if (strcmp (topic_name, "help") == 0) {
+ 	printf ("The notmuch help system.\n\n"
+ 		"\tNotmuch uses the man command to display help. In case\n"
+diff --git a/x-emmapa/embedded-manpages.c b/x-emmapa/embedded-manpages.c
 new file mode 100644
-index 0000000..7ae7441
+index 00000000..7ae74410
 --- /dev/null
-+++ b/haxs/embedded-manpages.c
++++ b/x-emmapa/embedded-manpages.c
 @@ -0,0 +1,106 @@
 +/*
 + * This file is external hack to have namual pages embedded in single
@@ -153,11 +175,11 @@ index 0000000..7ae7441
 +    exit(0);
 +    // defunct until less(1) exits and init(8) reaps
 +}
-diff --git a/haxs/gen-manpage-code.pl b/haxs/gen-manpage-code.pl
+diff --git a/x-emmapa/gen-manpage-code.pl b/x-emmapa/gen-manpage-code.pl
 new file mode 100755
-index 0000000..174960b
+index 00000000..174960b2
 --- /dev/null
-+++ b/haxs/gen-manpage-code.pl
++++ b/x-emmapa/gen-manpage-code.pl
 @@ -0,0 +1,70 @@
 +#!/usr/bin/perl
 +# -*- mode: cperl; cperl-indent-level: 4 -*-
@@ -229,21 +251,6 @@ index 0000000..174960b
 +
 +print join ",\n  ", @pagevars;
 +print ",\n  { (void *)0, 0 }\n};\n";
-diff --git a/notmuch.c b/notmuch.c
-index b9c3203..ccdf68e 100644
---- a/notmuch.c
-+++ b/notmuch.c
-@@ -258,6 +258,10 @@ _help_for (const char *topic_name)
- 	return EXIT_SUCCESS;
-     }
- 
-+    // does not return
-+    extern void embedded_manpages(const char *);
-+    embedded_manpages(topic_name);
-+
-     if (strcmp (topic_name, "help") == 0) {
- 	printf ("The notmuch help system.\n\n"
- 		"\tNotmuch uses the man command to display help. In case\n"
 -- 
-2.7.4
+2.29.2
 
