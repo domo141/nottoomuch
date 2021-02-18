@@ -8,9 +8,9 @@
 #	    All rights reserved
 #
 # Created: Fri 12 Feb 2021 22:37:42 EET too
-# Last modified: Sun 14 Feb 2021 21:43:34 +0200 too
+# Last modified: Thu 18 Feb 2021 21:27:31 +0200 too
 
-# use podman-mk-notmuch-testenv.sh to create container images for this tool to use
+# use podman-mk-notmuch-testenv.sh to create container image for this tool...
 
 case ${BASH_VERSION-} in *.*) set -o posix; shopt -s xpg_echo; esac
 case ${ZSH_VERSION-} in *.*) emulate ksh; esac
@@ -31,22 +31,26 @@ test $# -le 1 || bd=${1##*/} bd=${bd#notmuch-testenv-}
 
 if test "${1-}" != '--in-container--' # --- this block is executed on host ---
 then
-	test $# = 2 || {
+	case $# in 2|3) ;; *)
 	  exec >&2; echo
-	  echo "Usage: ${0##*/} [notmuch-testenv-]{image-name:tag} ({srcdir}|.|bash)"
+	  echo "Usage: ${0##*/} ['notmuch-testenv-']{image-name:tag} \\"
+	  echo "          ({srcdir}|'.'|'bash') [tree-ish]"
 	  echo
 	  echo Available container images:
 	  format='table {{.Repository}}:{{.Tag}} {{.CreatedSince}} {{.Size}}'
 	  podman images --format="$format" 'notmuch-testenv-*'
+	  cdt='current dir'
 	  echo
 	  echo ' srcdir:  path where notmuch source is located'
-	  echo '          (out of tree build, builddir is created in current dir)'
+	  echo "          (out of tree build, builddir is created in $cdt)"
 	  echo "    '.':  build and run tests in notmuch source dir"
 	  echo " 'bash':  start bash in podman-started testenv container"
-	  echo '          (mounts current dir into the contaner)'
+	  echo
+	  echo ' [tree-ish]:  optional argument to be used with srcdir:'
+	  echo '              commit or tree to copy to builddir'
 	  echo
 	  exit 1
-	}
+	esac
 	case $1 in *notmuch-testenv-*) image=$1
 		;; *)  image=notmuch-testenv-$1
 	esac
@@ -54,10 +58,17 @@ then
 	eval_abspath dn0 = "${0%/*}"
 
 	if test "$2" = bash
-	then	set -x
+	then
+		case $PWD in $HOME/*/*) ;; *) die "'$PWD' not '$HOME/*/*'"
+		esac
+		# mount subdir in $HOME, to disable access to full $HOME
+		md=${PWD#$HOME/*/}; md=${PWD%/$md}
+
+		set -x
 		exec podman run --pull=never --rm -it --privileged \
-			--tmpfs /tmp:rw,size=65536k,mode=1777 -v "$dn0:/mnt:ro" \
-			-v "$PWD:$PWD" -w "$PWD" --hostname=$bd "$image" /bin/bash
+			--tmpfs /tmp:rw,size=65536k,mode=1777 \
+			-v "$dn0:/mnt:ro" -v "$md:$md" -w "$PWD" \
+			--hostname=$bd "$image" /bin/bash
 		exit not reached
 	fi
 
@@ -73,8 +84,8 @@ then
 	if test "$2" != '.'
 	then
 		eval_abspath ap2 = "$2"
-		case $ap2 in $HOME/*/*) ;; *) die "'$ap2' not '$HOME/*/*'" ;; esac
-
+		case $ap2 in $HOME/*/*) ;; *) die "'$ap2' not '$HOME/*/*'"
+		esac
 		# mount subdir in $HOME, to disable access to full $HOME
 		md=${ap2#$HOME/*/}; md=${ap2%/$md}
 
@@ -85,14 +96,24 @@ then
 		ap2='.'
 	fi
 
-	podman inspect -t image --format='{{.Size}}' "$image" 2>/dev/null ||
-		die "'$1': image missing" \
-		    'podman-mk-notmuch-testenv.sh can be used to create one...'
+	podman inspect -t image --format='{{.Size}}' "$image" 2>/dev/null || {
+		exec >&2
+		echo "'$1': image missing"
+		echo
+		echo Available container images:
+		f='table {{.Repository}}:{{.Tag}} {{.CreatedSince}} {{.Size}}'
+		podman images --format="$f" 'notmuch-testenv-*'
+		echo
+		echo podman-mk-notmuch-testenv.sh \
+			can be used to create a new one...
+		echo; exit
+	}
 	set -x
 	exec podman run --pull=never --rm -it --privileged \
 		--tmpfs /tmp:rw,size=65536k,mode=1777 \
 		-v "$dn0:/mnt:ro" -v "$md:$md" -w "$PWD" "$image" \
-		/bin/bash /mnt/"${0##*/}" --in-container-- "$image" "$ap2"
+		/bin/bash /mnt/"${0##*/}" --in-container-- \
+			"$image" "$ap2" ${3:+"$3"}
 	exit not reached
 fi
 
@@ -112,21 +133,29 @@ ymd_hms=`exec date +%Y%m%d-%H%M%S`
 #ymd_hms=`date +%Y%m%d-%H%M%S` # ooh, same pid count as above (???)
 ( : ) & wait; pid1=$!
 
-if test "$3" != '.'
+sd=$3
+
+if test "$sd" != '.'
 then
 	bd=${2##*/} bd=${bd#notmuch-testenv-}
 	bd=nmbd-$ymd_hms-${bd%:*}-${bd#*:}
 
 	mkdir "$bd"
 	cd "$bd"
+	if test "${4-}"
+	then
+		git -C "$3" archive --format tar "$4" | tar xf -
+		sd='.'
+	fi
 fi
 
 timez ss2 st2
 ( : ) & wait; pid2=$!
 
-"$3"/configure
 
-if test "$3" != '.'
+"$sd"/configure
+
+if test "$sd" != '.'
 then
 	# temp hack to disable python bindings in out-of-tree builds
 	sed -i '/HAVE_PYTHON/ s/1/0/' Makefile.config sh.config

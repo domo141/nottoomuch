@@ -8,7 +8,7 @@
 #	    All rights reserved
 #
 # Created: Sun 07 Apr 2020 22:04:22 EEST too
-# Last modified: Sun 14 Feb 2021 21:44:31 +0200 too
+# Last modified: Thu 18 Feb 2021 22:21:51 +0200 too
 
 case ${BASH_VERSION-} in *.*) set -o posix; shopt -s xpg_echo; esac
 case ${ZSH_VERSION-} in *.*) emulate ksh; esac
@@ -128,9 +128,9 @@ case $2 in ( fedora:* )
 	dnf -v -y install make gcc gcc-c++ redhat-rpm-config git \
 		xapian-core-devel gmime30-devel libtalloc-devel \
 		zlib-devel python3-sphinx man dtach emacs-nox gdb \
-		openssl gnupg2-smime xz diffutils parallel
+		openssl gnupg2-smime xz diffutils parallel \
+		python3-devel python3-cffi python3-pytest
 	#$dnf -v -y autoremove # removes findutils in centos 7
-	#$dnf -v -y clean all
 
 	dnf -v -y clean all
 	set +f
