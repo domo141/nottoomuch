@@ -6,7 +6,7 @@
 #           All rights reserved
 #
 # Created: Sun 20 Oct 2019 20:41:59 +0300 too
-# Last modified: Wed 12 Aug 2020 23:06:24 +0300 too
+# Last modified: Mon 03 May 2021 20:48:44 +0300 too
 
 # Note: writes material under $HOME. grep HOME {thisfile} to see details...
 
@@ -91,7 +91,7 @@ test -f /run/.containerenv || die "No '/run/.containerenv' !?"
 
 HOME=$2; Z=$3; shift 3
 echo $HOME - $Z
-# note: HOME no exported..
+# note: HOME not exported..
 
 TAR_OPTIONS='--no-same-owner' # hint: podman unshare ... if this does not do it
 export TAR_OPTIONS
@@ -265,18 +265,18 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ipa/xapian-core-$xapian_ver/lib
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ipa/zlib-$zlib_ver/lib
 
 : 2 :
-case $* in *' 2 '*) ## patch notmuch (optional)
+case $* in *' 2 '*) ## patch notmuch (optional) (modifies notmuch-srcdir)
 	cd /mnt
 	gl5=`exec git --no-pager log -5 --oneline` # enough, due to rebases...
 	case $gl5 in *'hax: notmuch binary with embedded manpages'*) ;; *)
-		git am "$dn0"/02-hacked-embedded-manpages-in.patch
+		git am "$dn0"/02-hack-notmuch-with-embedded-manpages.patch
 	esac
 	#git am "$dn0"/01-date-local.patch # see: make-one-notmuch-el.pl
 esac
 
 
 : 3 :
-case $* in *' 3 '*) ## build notmuch (remember '7' -- rpath)
+case $* in *' 3 '*) ## build notmuch (in-tree) (remember '7' -- rpath)
 	cd /mnt
 	sed '/command .* gpgme-config/,/^else/ s/errors=/#errors=/' configure \
 		> hax-configure
