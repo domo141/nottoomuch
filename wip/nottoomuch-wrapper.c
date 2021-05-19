@@ -24,7 +24,7 @@
  * $ nottoomuch-wrapper.c $
  *
  * Created: Tue 13 Mar 2012 12:34:26 EET too
- * Last modified: Sat 17 Sep 2016 14:26:18 +0300 too
+ * Last modified: Wed 19 May 2021 21:15:19 +0300 too
  */
 
 #include <unistd.h>
@@ -42,7 +42,7 @@
 
 #define null ((void *)0)
 
-#define WriteCS(f, s) write((f), (s), sizeof (s) - 1);
+#define WriteCS(f, s) write((f), ("" s ""), sizeof (s) - 1)
 
 time_t gt;
 
