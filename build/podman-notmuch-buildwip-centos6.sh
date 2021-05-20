@@ -6,7 +6,7 @@
 #           All rights reserved
 #
 # Created: Sat 23 Nov 2019 20:11:23 +0200 too
-# Last modified: Sun 24 Nov 2019 21:58:26 +0200 too
+# Last modified: Thu 20 May 2021 23:35:41 +0300 too
 
 # SPDX-License-Identifier: Unlicense
 
@@ -65,9 +65,9 @@ then
 	fi
 
 	case $0 in /*)	dn0=${0%/*}
-		;; */*/*) dn0=`exec realpath ${0%/*}`
+		;; */*/*) dn0=`cd "${0%/*}" && pwd`
 		;; ./*)	dn0=$PWD
-		;; */*)	dn0=`exec realpath ${0%/*}`
+		;; */*)	dn0=`cd "${0%/*}" && pwd`
 		;; *)	dn0=$PWD
 	esac
 

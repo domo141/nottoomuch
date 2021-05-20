@@ -6,7 +6,7 @@
 #           All rights reserved
 #
 # Created: Sun 20 Oct 2019 20:41:59 +0300 too
-# Last modified: Mon 03 May 2021 20:48:44 +0300 too
+# Last modified: Thu 20 May 2021 23:41:05 +0300 too
 
 # Note: writes material under $HOME. grep HOME {thisfile} to see details...
 
@@ -53,9 +53,9 @@ then
 	nmsrc=$1; shift
 
 	case $0 in /*)	dn0=${0%/*}
-		;; */*/*) dn0=`exec realpath ${0%/*}`
+		;; */*/*) dn0=`cd "${0%/*}" && pwd`
 		;; ./*)	dn0=$PWD
-		;; */*)	dn0=`exec realpath ${0%/*}`
+		;; */*)	dn0=`cd "${0%/*}" && pwd`
 		;; *)	dn0=$PWD
 	esac
 
@@ -279,8 +279,8 @@ esac
 case $* in *' 3 '*) ## build notmuch (in-tree) (remember '7' -- rpath)
 	cd /mnt
 	sed '/command .* gpgme-config/,/^else/ s/errors=/#errors=/' configure \
-		> hax-configure
-	sh ./hax-configure
+		> hax-centos6-configure
+	sh ./hax-centos6-configure
 	#export CFLAGS="${CFLAGS:+$CFLAGS } -v"
 	make #V=1
 	#make test

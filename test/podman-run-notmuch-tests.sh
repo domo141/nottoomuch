@@ -8,7 +8,7 @@
 #	    All rights reserved
 #
 # Created: Fri 12 Feb 2021 22:37:42 EET too
-# Last modified: Thu 18 Feb 2021 21:27:31 +0200 too
+# Last modified: Thu 20 May 2021 23:33:13 +0300 too
 
 # use podman-mk-notmuch-testenv.sh to create container image for this tool...
 
@@ -17,12 +17,12 @@ case ${ZSH_VERSION-} in *.*) emulate ksh; esac
 
 set -euf  # hint: sh -x thisfile [args] to trace execution
 
-eval_abspath () # val '=' $var
+eval_dirabspath () # val '=' $var
 {
- eval ' case $3 in /*)    '$1'=$3
-		;; */*/*) '$1'=`exec realpath "$3"`
+ eval ' case $3 in /*)	  '$1'=$3
+		;; */*/*) '$1'=`cd "$3" && pwd`
 		;; ./*)   '$1'=$PWD
-		;; */*)   '$1'=`exec realpath "$3"`
+		;; */*)   '$1'=`cd "$3" && pwd`
 		;; *)	  '$1'=$PWD
 	esac '
 }
@@ -55,7 +55,7 @@ then
 		;; *)  image=notmuch-testenv-$1
 	esac
 
-	eval_abspath dn0 = "${0%/*}"
+	eval_dirabspath dn0 = "${0%/*}"
 
 	if test "$2" = bash
 	then
@@ -83,7 +83,7 @@ then
 
 	if test "$2" != '.'
 	then
-		eval_abspath ap2 = "$2"
+		eval_dirabspath ap2 = "$2"
 		case $ap2 in $HOME/*/*) ;; *) die "'$ap2' not '$HOME/*/*'"
 		esac
 		# mount subdir in $HOME, to disable access to full $HOME

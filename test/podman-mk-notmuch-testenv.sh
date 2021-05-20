@@ -8,7 +8,7 @@
 #	    All rights reserved
 #
 # Created: Sun 07 Apr 2020 22:04:22 EEST too
-# Last modified: Thu 18 Feb 2021 22:21:51 +0200 too
+# Last modified: Thu 20 May 2021 23:33:53 +0300 too
 
 case ${BASH_VERSION-} in *.*) set -o posix; shopt -s xpg_echo; esac
 case ${ZSH_VERSION-} in *.*) emulate ksh; esac
@@ -57,9 +57,9 @@ then
 		exit 1
 	}
 	case $0 in /*)	dn0=${0%/*}
-		;; */*/*) dn0=`exec realpath ${0%/*}`
+		;; */*/*) dn0=`cd "${0%/*}" && pwd`
 		;; ./*)	dn0=$PWD
-		;; */*)	dn0=`exec realpath ${0%/*}`
+		;; */*)	dn0=`cd "${0%/*}" && pwd`
 		;; *)	dn0=$PWD
 	esac
 

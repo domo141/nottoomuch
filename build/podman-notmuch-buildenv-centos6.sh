@@ -6,7 +6,7 @@
 #           All rights reserved
 #
 # Created: Sun 20 Oct 2019 20:41:59 +0300 too
-# Last modified: Fri 08 May 2020 00:47:48 +0300 too
+# Last modified: Thu 20 May 2021 23:35:28 +0300 too
 
 # SPDX-License-Identifier: BSD-2-Clause
 
@@ -40,9 +40,9 @@ then
 	podman inspect centos:6.10 --format '{{.RepoTags}}'
 
 	case $0 in /*)	dn0=${0%/*}
-		;; */*/*) dn0=`exec realpath ${0%/*}`
+		;; */*/*) dn0=`cd "${0%/*}" && pwd`
 		;; ./*)	dn0=$PWD
-		;; */*)	dn0=`exec realpath ${0%/*}`
+		;; */*)	dn0=`cd "${0%/*}" && pwd`
 		;; *)	dn0=$PWD
 	esac
 
