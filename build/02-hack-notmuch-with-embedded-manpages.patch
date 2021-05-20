@@ -1,4 +1,4 @@
-From 9d74ae6476e98818bb4e6166a21617a7c8b7baa1 Mon Sep 17 00:00:00 2001
+From 01da1179b6acb1fabe1f676bee7fbc5a5c86da25 Mon Sep 17 00:00:00 2001
 From: Tomi Ollila <tomi.ollila@iki.fi>
 Date: Sun, 17 Jan 2021 20:47:09 +0200
 Subject: [SUPPORTIVE PATCH #2] hack: notmuch help ... using embedded manual pages
@@ -18,41 +18,41 @@ This hack embeds built notmuch manual pages (in gzipped roff format)
 into the notmuch binary and creates `gzip -dc | nroff -man | less`
 pipeline to display requested notmuch manual page.
 ---
- Makefile.local               |  11 ++++
- notmuch.c                    |   4 ++
- x-emmapa/embedded-manpages.c | 106 +++++++++++++++++++++++++++++++++++
- x-emmapa/gen-manpage-code.pl |  70 +++++++++++++++++++++++
+ Makefile.local                  |  11 ++++
+ notmuch.c                       |   4 ++
+ x-embd-manp/embedded-manpages.c | 106 ++++++++++++++++++++++++++++++++
+ x-embd-manp/gen-manpage-code.pl |  70 +++++++++++++++++++++
  4 files changed, 191 insertions(+)
- create mode 100644 x-emmapa/embedded-manpages.c
- create mode 100755 x-emmapa/gen-manpage-code.pl
+ create mode 100644 x-embd-manp/embedded-manpages.c
+ create mode 100755 x-embd-manp/gen-manpage-code.pl
 
 diff --git a/Makefile.local b/Makefile.local
-index bbb8f0b6..f14f193a 100644
+index e12b94cd..5138bff3 100644
 --- a/Makefile.local
 +++ b/Makefile.local
-@@ -252,6 +252,17 @@ notmuch_client_srcs =		\
+@@ -253,6 +253,17 @@ notmuch_client_srcs =		\
  	mime-node.c		\
  	tag-util.c
  
 +# --- embedded manpages part begin ---
-+x-emmapa:
++x-embd-manp:
 +	mkdir $@
-+x-emmapa/embedded-manpages.o x-emmapa/manpages-data.o: | x-emmapa
-+notmuch_client_srcs += x-emmapa/embedded-manpages.c
-+notmuch_client_srcs += $(CURDIR)/x-emmapa/manpages-data.c
-+$(CURDIR)/x-emmapa/manpages-data.c: $(MAN_GZIP_FILES)
-+$(CURDIR)/x-emmapa/manpages-data.c: $(srcdir)/x-emmapa/gen-manpage-code.pl
-+	$(srcdir)/x-emmapa/gen-manpage-code.pl $@
++x-embd-manp/embedded-manpages.o x-embd-manp/manpages-data.o: | x-embd-manp
++notmuch_client_srcs += x-embd-manp/embedded-manpages.c
++notmuch_client_srcs += $(CURDIR)/x-embd-manp/manpages-data.c
++$(CURDIR)/x-embd-manp/manpages-data.c: $(MAN_GZIP_FILES)
++$(CURDIR)/x-embd-manp/manpages-data.c: $(srcdir)/x-embd-manp/gen-manpage-code.pl
++	$(srcdir)/x-embd-manp/gen-manpage-code.pl $@
 +# --- embedded manpages part end ----
 +
  notmuch_client_modules = $(notmuch_client_srcs:.c=.o)
  
  notmuch.o: version.stamp
 diff --git a/notmuch.c b/notmuch.c
-index 4ef1484f..0a007ff0 100644
+index d0a94fc2..43b7af16 100644
 --- a/notmuch.c
 +++ b/notmuch.c
-@@ -305,6 +305,10 @@ _help_for (const char *topic_name)
+@@ -318,6 +318,10 @@ _help_for (const char *topic_name)
  	return EXIT_SUCCESS;
      }
  
@@ -63,11 +63,11 @@ index 4ef1484f..0a007ff0 100644
      if (strcmp (topic_name, "help") == 0) {
  	printf ("The notmuch help system.\n\n"
  		"\tNotmuch uses the man command to display help. In case\n"
-diff --git a/x-emmapa/embedded-manpages.c b/x-emmapa/embedded-manpages.c
+diff --git a/x-embd-manp/embedded-manpages.c b/x-embd-manp/embedded-manpages.c
 new file mode 100644
 index 00000000..7ae74410
 --- /dev/null
-+++ b/x-emmapa/embedded-manpages.c
++++ b/x-embd-manp/embedded-manpages.c
 @@ -0,0 +1,106 @@
 +/*
 + * This file is external hack to have namual pages embedded in single
@@ -175,11 +175,11 @@ index 00000000..7ae74410
 +    exit(0);
 +    // defunct until less(1) exits and init(8) reaps
 +}
-diff --git a/x-emmapa/gen-manpage-code.pl b/x-emmapa/gen-manpage-code.pl
+diff --git a/x-embd-manp/gen-manpage-code.pl b/x-embd-manp/gen-manpage-code.pl
 new file mode 100755
 index 00000000..174960b2
 --- /dev/null
-+++ b/x-emmapa/gen-manpage-code.pl
++++ b/x-embd-manp/gen-manpage-code.pl
 @@ -0,0 +1,70 @@
 +#!/usr/bin/perl
 +# -*- mode: cperl; cperl-indent-level: 4 -*-
@@ -252,5 +252,5 @@ index 00000000..174960b2
 +print join ",\n  ", @pagevars;
 +print ",\n  { (void *)0, 0 }\n};\n";
 -- 
-2.29.2
+2.31.1
 
