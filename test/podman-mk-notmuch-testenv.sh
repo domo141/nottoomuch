@@ -8,7 +8,7 @@
 #	    All rights reserved
 #
 # Created: Sun 07 Apr 2020 22:04:22 EEST too
-# Last modified: Thu 20 May 2021 23:33:53 +0300 too
+# Last modified: Wed 06 Oct 2021 22:15:50 +0300 too
 
 case ${BASH_VERSION-} in *.*) set -o posix; shopt -s xpg_echo; esac
 case ${ZSH_VERSION-} in *.*) emulate ksh; esac
@@ -114,7 +114,7 @@ case $2 in ( debian:* | ubuntu:* )
 	apt-get install -y -q build-essential emacs-nox gdb git man \
 		dtach libxapian-dev libgmime-3.0-dev libtalloc-dev \
 		python3-sphinx python3-cffi python3-pytest \
-		python3-setuptools libpython3-all-dev gpgsm parallel
+		python3-setuptools libpython3-dev gpgsm parallel
 	apt-get -y autoremove
 	apt-get -y clean
 	rm -rf /var/lib/apt/lists/

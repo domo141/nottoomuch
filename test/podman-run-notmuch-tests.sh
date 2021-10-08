@@ -8,7 +8,7 @@
 #	    All rights reserved
 #
 # Created: Fri 12 Feb 2021 22:37:42 EET too
-# Last modified: Thu 20 May 2021 23:33:13 +0300 too
+# Last modified: Fri 08 Oct 2021 23:24:29 +0300 too
 
 # use podman-mk-notmuch-testenv.sh to create container image for this tool...
 
@@ -19,11 +19,12 @@ set -euf  # hint: sh -x thisfile [args] to trace execution
 
 eval_dirabspath () # val '=' $var
 {
- eval ' case $3 in /*)	  '$1'=$3
+ eval ' case $3 in .)	  '$1'=$PWD
+		;; /*)	  '$1'=$3
 		;; */*/*) '$1'=`cd "$3" && pwd`
-		;; ./*)   '$1'=$PWD
+		;; ./*)   '$1'=$PWD/${3#./}
 		;; */*)   '$1'=`cd "$3" && pwd`
-		;; *)	  '$1'=$PWD
+		;; *)	  '$1'=$PWD/$3
 	esac '
 }
 
@@ -34,7 +35,7 @@ then
 	case $# in 2|3) ;; *)
 	  exec >&2; echo
 	  echo "Usage: ${0##*/} ['notmuch-testenv-']{image-name:tag} \\"
-	  echo "          ({srcdir}|'.'|'bash') [tree-ish]"
+	  echo "          ({srcdir} [tree-ish]|'.'|'bash')"
 	  echo
 	  echo Available container images:
 	  format='table {{.Repository}}:{{.Tag}} {{.CreatedSince}} {{.Size}}'
@@ -44,10 +45,12 @@ then
 	  echo ' srcdir:  path where notmuch source is located'
 	  echo "          (out of tree build, builddir is created in $cdt)"
 	  echo "    '.':  build and run tests in notmuch source dir"
+	  echo "          (current dir has to be notmuch source dir)"
 	  echo " 'bash':  start bash in podman-started testenv container"
+	  echo "          (build and run tests manually in container)"
 	  echo
 	  echo ' [tree-ish]:  optional argument to be used with srcdir:'
-	  echo '              commit or tree to copy to builddir'
+	  echo '              git commit or tree to copy to builddir'
 	  echo
 	  exit 1
 	esac
