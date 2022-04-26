@@ -2,7 +2,7 @@
 # -*- shell-script -*-
 #
 # Created: Tue 29 May 2012 21:30:17 EEST too
-# Last modified: Mon 27 Jul 2020 22:14:36 +0300 too
+# Last modified: Sun 19 Dec 2021 11:59:37 +0200 too
 
 # See first ./nottoomuch-remote.rst and then maybe:
 # http://notmuchmail.org/remoteusage/
@@ -23,7 +23,7 @@ readonly SSH_CONTROL_ARGS
 printf -v ARGS '%q ' "$@" # bash feature
 readonly ARGS
 
-if ssh -q $SSH_CONTROL_ARGS 0.1 "$REMOTE_NOTMUCH_COMMAND" $ARGS
+if ssh -q $SSH_CONTROL_ARGS .1 "$REMOTE_NOTMUCH_COMMAND" $ARGS
 then exit 0
 else ev=$?
 fi
