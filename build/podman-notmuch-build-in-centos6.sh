@@ -6,7 +6,7 @@
 #           All rights reserved
 #
 # Created: Sun 20 Oct 2019 20:41:59 +0300 too
-# Last modified: Thu 20 May 2021 23:41:05 +0300 too
+# Last modified: Tue 26 Apr 2022 23:42:45 +0300 too
 
 # Note: writes material under $HOME. grep HOME {thisfile} to see details...
 
@@ -33,7 +33,11 @@ test $# -ge 3 || {
 	echo
 	podman images notmuch-buildenv-centos6
 	echo
-	grep ' [0-9] '\' "$0"
+	grep '^case .* [0-9] '\' "$0"
+	echo
+	echo "Usually, after libs once done, to rebuild '3' and '7' are enough."
+	echo "Build is done in-tree and after build, final 'notmuch' binary"
+	echo "must *not* be stripped."
 	echo
 	exit 1
 }
@@ -264,15 +268,17 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ipa/xapian-core-$xapian_ver/lib
 # this ld library path setting was not needed until now
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ipa/zlib-$zlib_ver/lib
 
-: 2 :
-case $* in *' 2 '*) ## patch notmuch (optional) (modifies notmuch-srcdir)
-	cd /mnt
-	gl5=`exec git --no-pager log -5 --oneline` # enough, due to rebases...
-	case $gl5 in *'hax: notmuch binary with embedded manpages'*) ;; *)
-		git am "$dn0"/02-hack-notmuch-with-embedded-manpages.patch
-	esac
-	#git am "$dn0"/01-date-local.patch # see: make-one-notmuch-el.pl
-esac
+
+# vvvvv better to run desired git am on command line when needed
+# : 2 :
+# case $* in *' 2 '*) ## patch notmuch (optional) (modifies notmuch-srcdir)
+# 	cd /mnt
+# 	gl5=`exec git --no-pager log -5 --oneline` # enough, due to rebases...
+# 	case $gl5 in *'hax: notmuch binary with embedded manpages'*) ;; *)
+# 		git am "$dn0"/02-hack-notmuch-with-embedded-manpages.patch
+# 	esac
+# 	#git am "$dn0"/01-date-local.patch # see: make-one-notmuch-el.pl
+# esac
 
 
 : 3 :
