@@ -1,0 +1,10 @@
+
+I used to use notmuch on Scientific Linux 6.2 (like rhel6) system,
+from 2021 to end of may 2022 (notmuch 0.6 - notmuch 0.36).
+
+At some point I could not continue compiling notmuch on that
+particular system, so I had to create these build containers
+to get the job done.
+
+But no more, so I moved these neat(?) scripts here,
+there may be some reference value here...
