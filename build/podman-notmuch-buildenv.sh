@@ -8,7 +8,7 @@
 #	    All rights reserved
 #
 # Created: Wed 08 Apr 2020 22:04:22 EEST too
-# Last modified: Sat 18 Jun 2022 12:18:19 +0300 too
+# Last modified: Sat 18 Jun 2022 23:20:15 +0300 too
 
 # SPDX-License-Identifier: 0BSD
 
@@ -24,7 +24,6 @@ if test "${1-}" != '--in-container--' # --- this block is executed on host ---
 then
 	from_images="debian:* ubuntu:* fedora:*" # more to add...
 
-	#die () { echo; printf '%s\n\n' "$@"; exit 1; } >&2
 	die () { printf '%s\n' '' "$@" ''; exit 1; } >&2
 	x () { printf '+ %s\n' "$*" >&2; "$@"; }
 	x_exec () { printf '+ %s\n' "$*" >&2; exec "$@"; }
@@ -101,9 +100,9 @@ then
 		exit 1
 	}
 	case $0 in /*)	dn0=${0%/*}
-		;; */*/*) dn0=`realpath ${0%/*}`
+		;; */*/*) dn0=`cd "${0%/*}" && pwd`
 		;; ./*)	dn0=$PWD
-		;; */*)	dn0=`realpath ${0%/*}`
+		;; */*)	dn0=`cd "${0%/*}" && pwd`
 		;; *)	dn0=$PWD
 	esac
 
@@ -154,7 +153,7 @@ set -x
 
 test -f /run/.containerenv || die "No '/run/.containerenv' !?"
 
-case $2 in debian:* | ubuntu:* )
+case $2 in ( debian:* | ubuntu:* )
 	export DEBIAN_FRONTEND=noninteractive
 	apt-get update
 	# note: no 'upgrade' -- pull new base image for that...
@@ -171,7 +170,7 @@ case $2 in debian:* | ubuntu:* )
 	exit
 esac
 
-case $2 in fedora:* | centos:* ) # alma/rocky linux instead of centos ?
+case $2 in ( fedora:* | centos:* ) # alma/rocky linux instead of centos ?
 
 	# note: centos in progress -- gmime, dtach, python3-sphinx not found...
 	#case $2 in fedora:*) fedora=true ;; *) fedora=false ;; esac
@@ -181,8 +180,9 @@ case $2 in fedora:* | centos:* ) # alma/rocky linux instead of centos ?
 	#
 	dnf -v -y install make gcc gcc-c++ emacs-nox gdb git man \
 		dtach xapian-core-devel gmime30-devel libtalloc-devel \
-		zlib-devel python3-sphinx gnupg2-smime xz \
+		zlib-devel python3-sphinx gnupg2-smime xz openssl \
 		redhat-rpm-config ruby-devel diffutils findutils
+		# python3-devel python3-cffi python3-pytest
 
 	dnf -v -y autoremove # note: removed findutils in centos 7.0
 	dnf -v -y clean all
