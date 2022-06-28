@@ -8,7 +8,7 @@
 #	    All rights reserved
 #
 # Created: Wed 08 Apr 2020 22:04:22 EEST too
-# Last modified: Sat 18 Jun 2022 23:20:15 +0300 too
+# Last modified: Tue 28 Jun 2022 22:26:15 +0300 too
 
 # SPDX-License-Identifier: 0BSD
 
@@ -44,7 +44,7 @@ then
 			echo
 			# v tested that works w/ gawk & mawk v #
 			awk -v il="$il" 'BEGIN { gsub("//[^/]*/", "", il); print il }'
-			die  "Usage $0 run {container-image} [command [args]]" \
+			die  "Usage $0 $1 {container-image} [command [args]]" \
 			''	'Use one of the container images listed above.'\
 			''	'Note: $HOME/ is mounted in the started container...'
 			exit not reached
@@ -61,13 +61,13 @@ then
 
 	test $# = 3 || {
 	    today=`date +%Y%m%d`
-	    die "Usage: $0 yyyymmdd from-image-name:tag" '' \
+	    die "Usage: $0 $1 yyyymmdd from-image-name:tag" '' \
 		"Enter '$today' as 'yyyymmdd'." '' \
 		'Known "from" images '"(replace '*' with container image tag):"\
 		'' "    $from_images" '' \
 		"Creates: 'notmuch-buildenv-{from-image-name}-{tag}:yyyymmdd' container image." '' \
 		'Note: all versions of the "from" images may not ne compatible.' \
-		'(as of 2022-06 tested with debian:11 and fedora:36 as from-image)'
+		'(as of 2022-06 tested with debian:11.3 and fedora:36 as from-image)'
 	}
 	case $3 in ??*:?*) ;; *) die "'$3' not '{name}:{tag}'" ;; esac
 	n3=${3%:*}
