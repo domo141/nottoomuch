@@ -8,7 +8,7 @@
 #	    All rights reserved
 #
 # Created: Wed 08 Apr 2020 22:04:22 EEST too
-# Last modified: Tue 28 Jun 2022 22:26:15 +0300 too
+# Last modified: Fri 01 Jul 2022 16:13:00 +0300 too
 
 # SPDX-License-Identifier: 0BSD
 
@@ -99,7 +99,9 @@ then
 		echo
 		exit 1
 	}
-	case $0 in /*)	dn0=${0%/*}
+	#echo "'$0'"
+	case $0 in /*/../*) dn0=`cd "${0%/*}" && pwd`
+		;; /*)	dn0=${0%/*}
 		;; */*/*) dn0=`cd "${0%/*}" && pwd`
 		;; ./*)	dn0=$PWD
 		;; */*)	dn0=`cd "${0%/*}" && pwd`
