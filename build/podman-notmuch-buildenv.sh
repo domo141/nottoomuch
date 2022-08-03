@@ -8,7 +8,7 @@
 #	    All rights reserved
 #
 # Created: Wed 08 Apr 2020 22:04:22 EEST too
-# Last modified: Fri 01 Jul 2022 16:13:00 +0300 too
+# Last modified: Wed 03 Aug 2022 18:04:01 +0300 too
 
 # SPDX-License-Identifier: 0BSD
 
@@ -118,6 +118,8 @@ then
 
 	echo 'Back in "host" environment...'
 
+	#podman logs $target_base-wip > "$target_image".plog
+
 	# remove some noise in container, at least older podmans did that...
 	x podman unshare sh -eufxc '
 		mp=`podman mount "'"$target_base-wip"'"`
@@ -156,6 +158,10 @@ set -x
 test -f /run/.containerenv || die "No '/run/.containerenv' !?"
 
 case $2 in ( debian:* | ubuntu:* )
+	# libsexp-dev is in bullseye-backports...
+	grep -q ' bullseye ' /etc/apt/sources.list &&
+	echo deb http://deb.debian.org/debian bullseye-backports main \
+		> /etc/apt/sources.list.d/backports.list
 	export DEBIAN_FRONTEND=noninteractive
 	apt-get update
 	# note: no 'upgrade' -- pull new base image for that...
@@ -164,6 +170,7 @@ case $2 in ( debian:* | ubuntu:* )
 		dtach libxapian-dev libgmime-3.0-dev libtalloc-dev \
 		python3-sphinx python3-cffi python3-pytest \
 		python3-setuptools libpython3-all-dev gpgsm ruby-dev
+	apt-get install -y -q libsexp-dev || true
 
 	apt-get -y autoremove
 	apt-get -y clean
@@ -183,7 +190,8 @@ case $2 in ( fedora:* | centos:* ) # alma/rocky linux instead of centos ?
 	dnf -v -y install make gcc gcc-c++ emacs-nox gdb git man \
 		dtach xapian-core-devel gmime30-devel libtalloc-devel \
 		zlib-devel python3-sphinx gnupg2-smime xz openssl \
-		redhat-rpm-config ruby-devel diffutils findutils
+		redhat-rpm-config ruby-devel diffutils findutils \
+		sfsexp-devel
 		# python3-devel python3-cffi python3-pytest
 
 	dnf -v -y autoremove # note: removed findutils in centos 7.0
