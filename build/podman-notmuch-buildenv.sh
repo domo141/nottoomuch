@@ -8,7 +8,7 @@
 #	    All rights reserved
 #
 # Created: Wed 08 Apr 2020 22:04:22 EEST too
-# Last modified: Wed 03 Aug 2022 18:04:01 +0300 too
+# Last modified: Sun 04 Sep 2022 15:57:32 +0300 too
 
 # SPDX-License-Identifier: 0BSD
 
@@ -166,11 +166,12 @@ case $2 in ( debian:* | ubuntu:* )
 	apt-get update
 	# note: no 'upgrade' -- pull new base image for that...
 	# .travis.yml was helpful (but not complete)...
-	apt-get install -y -q build-essential emacs-nox gdb git man \
-		dtach libxapian-dev libgmime-3.0-dev libtalloc-dev \
+	apt-get install -y -q --no-install-recommends build-essential \
+		emacs-nox gdb git man dtach gpgsm \
+		libxapian-dev libgmime-3.0-dev libtalloc-dev \
 		python3-sphinx python3-cffi python3-pytest \
-		python3-setuptools libpython3-all-dev gpgsm ruby-dev
-	apt-get install -y -q libsexp-dev || true
+		python3-setuptools libpython3-all-dev ruby-dev
+	apt-get install -y -q --no-install-recommends libsexp-dev || true
 
 	apt-get -y autoremove
 	apt-get -y clean
