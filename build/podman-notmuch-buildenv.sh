@@ -8,7 +8,7 @@
 #	    All rights reserved
 #
 # Created: Wed 08 Apr 2020 22:04:22 EEST too
-# Last modified: Sun 04 Sep 2022 15:57:32 +0300 too
+# Last modified: Mon 19 Dec 2022 00:08:07 +0200 too
 
 # SPDX-License-Identifier: 0BSD
 
@@ -46,7 +46,7 @@ then
 			awk -v il="$il" 'BEGIN { gsub("//[^/]*/", "", il); print il }'
 			die  "Usage $0 $1 {container-image} [command [args]]" \
 			''	'Use one of the container images listed above.'\
-			''	'Note: $HOME/ is mounted in the started container...'
+			''	'Note: $HOME/ is mounted in the started container...' '' `realpath "$0"`
 			exit not reached
 		}
 		case $2 in *notmuch-buildenv-*) ;; *)
@@ -167,7 +167,7 @@ case $2 in ( debian:* | ubuntu:* )
 	# note: no 'upgrade' -- pull new base image for that...
 	# .travis.yml was helpful (but not complete)...
 	apt-get install -y -q --no-install-recommends build-essential \
-		emacs-nox gdb git man dtach gpgsm \
+		emacs-nox gdb git man dtach gpgsm strace less \
 		libxapian-dev libgmime-3.0-dev libtalloc-dev \
 		python3-sphinx python3-cffi python3-pytest \
 		python3-setuptools libpython3-all-dev ruby-dev
@@ -191,7 +191,7 @@ case $2 in ( fedora:* | centos:* ) # alma/rocky linux instead of centos ?
 	dnf -v -y install make gcc gcc-c++ emacs-nox gdb git man \
 		dtach xapian-core-devel gmime30-devel libtalloc-devel \
 		zlib-devel python3-sphinx gnupg2-smime xz openssl \
-		redhat-rpm-config ruby-devel diffutils findutils \
+		redhat-rpm-config ruby-devel diffutils findutils strace \
 		sfsexp-devel
 		# python3-devel python3-cffi python3-pytest
 
