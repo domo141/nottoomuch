@@ -8,7 +8,7 @@
 #	    All rights reserved
 #
 # Created: Wed 08 Apr 2020 22:04:22 EEST too
-# Last modified: Mon 19 Dec 2022 00:08:07 +0200 too
+# Last modified: Wed 11 Mar 2026 20:23:02 +0200 too
 
 # SPDX-License-Identifier: 0BSD
 
@@ -44,9 +44,14 @@ then
 			echo
 			# v tested that works w/ gawk & mawk v #
 			awk -v il="$il" 'BEGIN { gsub("//[^/]*/", "", il); print il }'
-			die  "Usage $0 $1 {container-image} [command [args]]" \
+			c=path/to/${0##*/}
+			die  "Usage $c $1 {container-image} [command [args]]" \
 			''	'Use one of the container images listed above.'\
-			''	'Note: $HOME/ is mounted in the started container...' '' `realpath "$0"`
+			''	'Note: $HOME/ is mounted in the started container...' \
+			''	"`realpath "$0"` run ..." \
+			'' 	"It is usually easiest to chdir to notmuch source dir and" \
+				"use the command line (prefix) shown above when using this..." ''
+
 			exit not reached
 		}
 		case $2 in *notmuch-buildenv-*) ;; *)
@@ -65,9 +70,13 @@ then
 		"Enter '$today' as 'yyyymmdd'." '' \
 		'Known "from" images '"(replace '*' with container image tag):"\
 		'' "    $from_images" '' \
+		"(Execute e.g. podman images '*debian*' to see if any base" \
+		" images there - if not, podman pull {image} to get one)" '' \
 		"Creates: 'notmuch-buildenv-{from-image-name}-{tag}:yyyymmdd' container image." '' \
 		'Note: all versions of the "from" images may not ne compatible.' \
-		'(as of 2022-06 tested with debian:11.3 and fedora:36 as from-image)'
+		'(as of 2022-06 tested with debian:11.3 and fedora:36 as from-image)' \
+		'(updated 2026-03 -- debian:11 works again, fedoras probably,'\
+		' any centos may be hard, and alternatives not tried so far)' ''
 	}
 	case $3 in ??*:?*) ;; *) die "'$3' not '{name}:{tag}'" ;; esac
 	n3=${3%:*}
@@ -158,10 +167,6 @@ set -x
 test -f /run/.containerenv || die "No '/run/.containerenv' !?"
 
 case $2 in ( debian:* | ubuntu:* )
-	# libsexp-dev is in bullseye-backports...
-	grep -q ' bullseye ' /etc/apt/sources.list &&
-	echo deb http://deb.debian.org/debian bullseye-backports main \
-		> /etc/apt/sources.list.d/backports.list
 	export DEBIAN_FRONTEND=noninteractive
 	apt-get update
 	# note: no 'upgrade' -- pull new base image for that...
@@ -171,6 +176,8 @@ case $2 in ( debian:* | ubuntu:* )
 		libxapian-dev libgmime-3.0-dev libtalloc-dev \
 		python3-sphinx python3-cffi python3-pytest \
 		python3-setuptools libpython3-all-dev ruby-dev
+	# libsexp-dev no longer in bullseye-backports (Debian 11)
+	grep -q ' bullseye ' /etc/apt/sources.list ||
 	apt-get install -y -q --no-install-recommends libsexp-dev || true
 
 	apt-get -y autoremove
