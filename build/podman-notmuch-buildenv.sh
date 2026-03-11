@@ -8,7 +8,7 @@
 #	    All rights reserved
 #
 # Created: Wed 08 Apr 2020 22:04:22 EEST too
-# Last modified: Wed 11 Mar 2026 20:23:02 +0200 too
+# Last modified: Wed 11 Mar 2026 20:58:05 +0200 too
 
 # SPDX-License-Identifier: 0BSD
 
@@ -49,8 +49,9 @@ then
 			''	'Use one of the container images listed above.'\
 			''	'Note: $HOME/ is mounted in the started container...' \
 			''	"`realpath "$0"` run ..." \
-			'' 	"It is usually easiest to chdir to notmuch source dir and" \
-				"use the command line (prefix) shown above when using this..." ''
+			'' 	"It could be easiest to chdir to notmuch source dir and" \
+				"use the command line (prefix) shown above when using this..." \
+				"Or, just run image without command to exec shell..." ''
 
 			exit not reached
 		}
@@ -76,7 +77,7 @@ then
 		'Note: all versions of the "from" images may not ne compatible.' \
 		'(as of 2022-06 tested with debian:11.3 and fedora:36 as from-image)' \
 		'(updated 2026-03 -- debian:11 works again, fedoras probably,'\
-		' any centos may be hard, and alternatives not tried so far)' ''
+		' any centos may be hard, and alternatives not tried so far)'
 	}
 	case $3 in ??*:?*) ;; *) die "'$3' not '{name}:{tag}'" ;; esac
 	n3=${3%:*}
@@ -117,8 +118,10 @@ then
 		;; *)	dn0=$PWD
 	esac
 
+	#	--tmpfs /run:rw,size=999999,mode=1777 \
 	x podman run --pull=never -it --privileged -v "$dn0:/mnt:ro" \
-		--tmpfs /tmp:rw,size=65536k,mode=1777 --hostname=buildhost \
+		--tmpfs /tmp:rw,size=65536k,mode=1777 \
+		--tmpfs /root:rw,size=99999,mode=1777 \
 		--name "$target_base-wip" "$3" \
 		/bin/sh /mnt/"${0##*/}" --in-container-- "$3" ||
 	die "Building '$target_image' failed..." '' Execute: \
@@ -129,12 +132,12 @@ then
 
 	#podman logs $target_base-wip > "$target_image".plog
 
-	# remove some noise in container, at least older podmans did that...
+	# base container may have noise in /run/ (hide it)
 	x podman unshare sh -eufxc '
 		mp=`podman mount "'"$target_base-wip"'"`
 		( cd "$mp"; rm -rfv run; exec mkdir -m 755 run )
 	'
-	x podman commit --change 'CMD=/bin/bash' \
+	x podman commit --change 'CMD=["/bin/bash"]' \
 		"$target_base-wip" "$target_image"
 	podman rm "$target_base-wip"
 	echo
