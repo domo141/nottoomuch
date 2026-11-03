@@ -2,14 +2,14 @@
 # -*- cperl -*-
 
 case $* in (''|--*) exec perl -x "$0" "$@" ;; (???*) ;; (*) exit 0 ;; esac
-grep -aiF "$*" "${XDG_CONFIG_HOME:-$HOME/.config}/nottoomuch/addresses.active"
+grep -aiF "$*" "${XDG_CONFIG_HOME:-$HOME/.config}/nottoomuch/${NOTTOOMUCH_ADDRESSES_PREFIX-}addresses.active"
 case $? in 0|1) exit 0; esac
 exit $?
 
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Tue 03 Nov 2026 20:35:56 +0200 too
+# Last modified: Tue 03 Nov 2026 21:15:45 +0200 too
 
 # Add these lines to your notmuch elisp configuration file
 # ;; (e.g to ~/.emacs.d/notmuch-config.el since notmuch 0.22):
@@ -24,6 +24,9 @@ exit $?
 # - 24 -^
 
 # HISTORY
+#
+# Version wip  2026-11-03 ...
+#   * NOTTOOMUCH_ADDRESSES_PREFIX there, undocumented so WIP. See issue #4
 #
 # Version 2.6  2026-11-03 18:35:56 UTC
 #   * Changed \ in line 447 (now 452) to \\ to fix warning perl 5.44 emitted.
@@ -136,11 +139,21 @@ use MIME::QuotedPrint 'decode_qp';
 
 use Time::Local;
 
+$_ = $ENV{NOTTOOMUCH_ADDRESSES_PREFIX} // '';
+if ($_) {
+    die "NOTTOOMUCH_ADDRESSES_PREFIX '$_' is shorter than 2 characters\n"
+      if ((length) < 2);
+
+    die "'/'s in NOTTOOMUCH_ADDRESSES_PREFIX '$_'\n" if /\//;
+    die "NOTTOOMUCH_ADDRESSES_PREFIX '$_' does not end with '-'\n"
+      unless /-$/;
+}
+
 my $configdir = ($ENV{XDG_CONFIG_HOME}||$ENV{HOME}.'/.config').'/nottoomuch';
-my $adbpath = $configdir . '/addresses';
-my $ignpath = $configdir . '/addresses.ignore';
-my $actpath = $configdir . '/addresses.active';
-my $toppath = $configdir . '/addresses.top';
+my $adbpath = $configdir . '/' . $_ . 'addresses';
+my $ignpath = $configdir . '/' . $_ . 'addresses.ignore';
+my $actpath = $configdir . '/' . $_ . 'addresses.active';
+my $toppath = $configdir . '/' . $_ . 'addresses.top';
 
 unless (@ARGV)
 {
