@@ -9,7 +9,7 @@ exit $?
 # $ nottoomuch-addresses.sh $
 #
 # Created: Thu 27 Oct 2011 17:38:46 EEST too
-# Last modified: Sat 03 Oct 2020 03:10:10 +0300 too
+# Last modified: Tue 03 Nov 2026 20:35:56 +0200 too
 
 # Add these lines to your notmuch elisp configuration file
 # ;; (e.g to ~/.emacs.d/notmuch-config.el since notmuch 0.22):
@@ -20,10 +20,14 @@ exit $?
 # Documentation at the end. Encoding: utf-8.
 
 #!perl
-# line 25
-# - 25 -^
+# line 24
+# - 24 -^
 
 # HISTORY
+#
+# Version 2.6  2026-11-03 18:35:56 UTC
+#   * Changed \ in line 447 (now 452) to \\ to fix warning perl 5.44 emitted.
+#   * Replaced 'use open ':utf8';' with 'BEGIN { ${^OPEN} = ":utf8\0:utf8" }'
 #
 # Version 2.5  2020-10-03 03:10:20 UTC
 #   * Added reading of new file 'addresses.top'. The addresses listed there
@@ -119,7 +123,8 @@ use strict;
 use warnings;
 
 use utf8;
-use open ':utf8'; # do not use with autodie (?)
+#use open ':utf8'; # outcommented since got often Can't locate open.pm in @INC
+BEGIN { ${^OPEN} = ":utf8\0:utf8" } # ...this does effectively the same #
 binmode STDOUT, ':utf8';
 binmode STDERR, ':utf8';
 
@@ -444,7 +449,7 @@ while (<$efn>) {
 	$_ = join ' ', @a;
 
 	if (time > $ptime) {
-	    my $c = qw(/ - \ |)[int ($ptime / 5) % 4];
+	    my $c = qw(/ - \\ |)[int ($ptime / 5) % 4];
 	    print $c, ' active addresses gathered: ', $addrcount, "\r";
 	    $ptime += 5;
 	}
@@ -627,7 +632,7 @@ B<nottoomuch-addresses.sh --help>  for more help
 
 =head1 VERSION
 
-2.5 (2020-10-03)
+2.6 (2026-11-03)
 
 =head1 <SEARCH STRING>
 
